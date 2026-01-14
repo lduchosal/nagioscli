@@ -5,7 +5,10 @@
       "Bash(pytest:*)",
       "Bash(python:*)",
       "Bash(git:*)",
-      "Bash(./publish.sh)"
+      "Bash(./publish.sh)",
+      "Bash(pip index:*)",
+      "Bash(ls:*)",
+      "Bash(xargs cat:*)"
     ],
     "deny": []
   }
