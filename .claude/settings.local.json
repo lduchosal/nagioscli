@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pdm:*)",
+      "Bash(pytest:*)",
+      "Bash(python:*)",
+      "Bash(git:*)"
+    ],
+    "deny": []
+  }
+}

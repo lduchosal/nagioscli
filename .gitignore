@@ -1,0 +1,12 @@
+/build/
+/nagioscli.egg-info/
+/dist/
+/.env
+/nagioscli.ini
+/.pdm-build/
+.venv
+__pycache__/
+*.pyc
+.coverage
+htmlcov/
+.pytest_cache/

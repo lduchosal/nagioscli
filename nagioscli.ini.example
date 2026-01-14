@@ -1,0 +1,17 @@
+[nagios]
+url = http://monitor.example.com/nagios
+username = nagiosadmin
+
+[auth]
+# Authentication method: password, pass_path, or env_var
+method = pass_path
+# For method = password:
+# password = your-password
+# For method = pass_path (password-store):
+pass_path = nagios/admin
+# For method = env_var:
+# env_var = NAGIOS_PASSWORD
+
+[settings]
+timeout = 30
+verify_ssl = false
