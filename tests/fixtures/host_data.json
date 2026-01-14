@@ -1,0 +1,28 @@
+{
+  "hosts": {
+    "web01.example.com": {
+      "name": "web01.example.com",
+      "address": "192.168.1.10",
+      "status": 2,
+      "plugin_output": "PING OK - Packet loss = 0%, RTA = 0.50 ms"
+    },
+    "db01.example.com": {
+      "name": "db01.example.com",
+      "address": "192.168.1.20",
+      "status": 2,
+      "plugin_output": "PING OK - Packet loss = 0%, RTA = 0.75 ms"
+    },
+    "mail01.example.com": {
+      "name": "mail01.example.com",
+      "address": "192.168.1.30",
+      "status": 4,
+      "plugin_output": "PING CRITICAL - Packet loss = 100%"
+    },
+    "backup01.example.com": {
+      "name": "backup01.example.com",
+      "address": "192.168.1.40",
+      "status": 8,
+      "plugin_output": "Host unreachable"
+    }
+  }
+}

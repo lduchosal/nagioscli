@@ -1,0 +1,40 @@
+{
+  "services": {
+    "web01.example.com/HTTP": {
+      "host_name": "web01.example.com",
+      "description": "HTTP",
+      "status": 2,
+      "plugin_output": "HTTP OK: HTTP/1.1 200 OK - 1234 bytes in 0.023 second response time"
+    },
+    "web01.example.com/HTTPS": {
+      "host_name": "web01.example.com",
+      "description": "HTTPS",
+      "status": 2,
+      "plugin_output": "HTTPS OK: HTTP/1.1 200 OK - 5678 bytes in 0.045 second response time"
+    },
+    "web01.example.com/DISK": {
+      "host_name": "web01.example.com",
+      "description": "DISK",
+      "status": 4,
+      "plugin_output": "DISK WARNING - free space: / 2048 MB (15% inode=85%)"
+    },
+    "db01.example.com/MySQL": {
+      "host_name": "db01.example.com",
+      "description": "MySQL",
+      "status": 2,
+      "plugin_output": "MYSQL OK - 0.001 seconds connection time"
+    },
+    "db01.example.com/DISK": {
+      "host_name": "db01.example.com",
+      "description": "DISK",
+      "status": 8,
+      "plugin_output": "DISK CRITICAL - free space: /var 512 MB (5% inode=90%)"
+    },
+    "mail01.example.com/SMTP": {
+      "host_name": "mail01.example.com",
+      "description": "SMTP",
+      "status": 16,
+      "plugin_output": "SMTP UNKNOWN - Connection timed out"
+    }
+  }
+}

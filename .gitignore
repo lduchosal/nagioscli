@@ -10,3 +10,6 @@ __pycache__/
 .coverage
 htmlcov/
 .pytest_cache/
+.idea/
+*.egg-info/
+pdm.lock
