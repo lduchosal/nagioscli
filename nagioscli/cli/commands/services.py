@@ -5,10 +5,11 @@ from typing import Any
 
 import click
 
-from nagioscli.core.config import load_config
 from nagioscli.core.client import NagiosClient
+from nagioscli.core.config import load_config
+
 from ..decorators import common_options, output_options
-from ..handlers import handle_error, OutputFormatter
+from ..handlers import OutputFormatter, handle_error
 
 
 def register_services_commands(main_group: Any) -> None:

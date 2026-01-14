@@ -1,7 +1,9 @@
 """CLI decorators for nagioscli."""
 
+from collections.abc import Callable
+from typing import Any
+
 import click
-from typing import Callable, Any
 
 
 def common_options(func: Callable[..., Any]) -> Callable[..., Any]:

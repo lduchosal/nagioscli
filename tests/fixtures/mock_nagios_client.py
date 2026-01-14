@@ -2,7 +2,6 @@
 
 import json
 from pathlib import Path
-from typing import List, Optional
 
 from nagioscli.core.exceptions import NotFoundError
 from nagioscli.core.models import Host, Service
@@ -50,10 +49,10 @@ class MockNagiosClient:
             plugin_output=host_data.get("plugin_output", ""),
         )
 
-    def get_problems(self) -> List[Service]:
+    def get_problems(self) -> list[Service]:
         """Get all services with problems from fixtures."""
         problems = []
-        for key, svc_data in self.service_data.get("services", {}).items():
+        for _key, svc_data in self.service_data.get("services", {}).items():
             if svc_data.get("status", 2) != 2:  # Not OK
                 problems.append(
                     Service(
@@ -65,7 +64,7 @@ class MockNagiosClient:
                 )
         return problems
 
-    def get_all_hosts(self) -> List[Host]:
+    def get_all_hosts(self) -> list[Host]:
         """Get all hosts from fixtures."""
         hosts = []
         for hostname, host_data in self.host_data.get("hosts", {}).items():
@@ -79,10 +78,10 @@ class MockNagiosClient:
             )
         return hosts
 
-    def get_host_services(self, hostname: str) -> List[Service]:
+    def get_host_services(self, hostname: str) -> list[Service]:
         """Get all services for a host from fixtures."""
         services = []
-        for key, svc_data in self.service_data.get("services", {}).items():
+        for _key, svc_data in self.service_data.get("services", {}).items():
             if svc_data.get("host_name") == hostname:
                 services.append(
                     Service(

@@ -2,9 +2,10 @@
 
 import os
 import tempfile
+
 import pytest
 
-from nagioscli.core.config import load_config, NagiosConfig
+from nagioscli.core.config import NagiosConfig, load_config
 from nagioscli.core.exceptions import ConfigurationError
 
 

@@ -1,8 +1,9 @@
 """Error handlers and formatters for click CLI."""
 
-import click
 import sys
 from typing import NoReturn
+
+import click
 
 from nagioscli.core.exceptions import (
     AuthenticationError,

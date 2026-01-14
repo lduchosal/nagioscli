@@ -3,7 +3,6 @@
 from dataclasses import dataclass
 from datetime import datetime
 from enum import IntEnum
-from typing import Optional
 
 
 class ServiceStatus(IntEnum):
@@ -31,8 +30,8 @@ class Service:
     description: str
     status: int
     plugin_output: str
-    last_check: Optional[datetime] = None
-    last_state_change: Optional[datetime] = None
+    last_check: datetime | None = None
+    last_state_change: datetime | None = None
     current_attempt: int = 0
     max_attempts: int = 0
     checks_enabled: bool = True
@@ -66,8 +65,8 @@ class Host:
     address: str
     status: int
     plugin_output: str
-    last_check: Optional[datetime] = None
-    last_state_change: Optional[datetime] = None
+    last_check: datetime | None = None
+    last_state_change: datetime | None = None
     checks_enabled: bool = True
     notifications_enabled: bool = True
     problem_acknowledged: bool = False
@@ -94,5 +93,5 @@ class NagiosInfo:
     """Nagios server information."""
 
     version: str
-    program_start: Optional[datetime] = None
-    last_data_update: Optional[datetime] = None
+    program_start: datetime | None = None
+    last_data_update: datetime | None = None

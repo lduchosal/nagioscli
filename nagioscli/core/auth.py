@@ -1,13 +1,12 @@
 """Authentication management for nagioscli."""
 
 import subprocess
-from typing import Tuple
 
 from .config import NagiosConfig
 from .exceptions import AuthenticationError
 
 
-def get_credentials(config: NagiosConfig) -> Tuple[str, str]:
+def get_credentials(config: NagiosConfig) -> tuple[str, str]:
     """Get username and password from configuration.
 
     Args:
@@ -67,8 +66,8 @@ def _get_password_from_pass(pass_path: str) -> str:
         return password
 
     except FileNotFoundError:
-        raise AuthenticationError("'pass' command not found. Install password-store.")
+        raise AuthenticationError("'pass' command not found. Install password-store.") from None
     except subprocess.TimeoutExpired:
-        raise AuthenticationError("Timeout waiting for pass command")
+        raise AuthenticationError("Timeout waiting for pass command") from None
     except Exception as e:
-        raise AuthenticationError(f"Failed to get password from pass: {e}")
+        raise AuthenticationError(f"Failed to get password from pass: {e}") from e

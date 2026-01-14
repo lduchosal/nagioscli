@@ -1,10 +1,12 @@
 """Nagios HTTP API client."""
 
+import base64
 import json
+import ssl
 import urllib.parse
 import urllib.request
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from .auth import get_credentials
 from .config import NagiosConfig
@@ -24,21 +26,35 @@ class NagiosClient:
         """
         self.config = config
         self.verbose = verbose
-        self._opener: Optional[urllib.request.OpenerDirector] = None
+        self._opener: urllib.request.OpenerDirector | None = None
+        self._auth_header: str | None = None
 
     def _get_opener(self) -> urllib.request.OpenerDirector:
-        """Get or create HTTP opener with authentication."""
+        """Get or create HTTP opener with SSL handling."""
         if self._opener is None:
-            username, password = get_credentials(self.config)
+            handlers: list[urllib.request.BaseHandler] = []
 
-            password_mgr = urllib.request.HTTPPasswordMgrWithDefaultRealm()
-            password_mgr.add_password(None, self.config.url, username, password)
-            auth_handler = urllib.request.HTTPBasicAuthHandler(password_mgr)
-            self._opener = urllib.request.build_opener(auth_handler)
+            if not self.config.verify_ssl:
+                ssl_context = ssl.create_default_context()
+                ssl_context.check_hostname = False
+                ssl_context.verify_mode = ssl.CERT_NONE
+                https_handler = urllib.request.HTTPSHandler(context=ssl_context)
+                handlers.append(https_handler)
+
+            self._opener = urllib.request.build_opener(*handlers)
 
         return self._opener
 
-    def _request(self, endpoint: str, params: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+    def _get_auth_header(self) -> str:
+        """Get Basic Auth header value (preemptive auth)."""
+        if self._auth_header is None:
+            username, password = get_credentials(self.config)
+            credentials = f"{username}:{password}"
+            encoded = base64.b64encode(credentials.encode()).decode()
+            self._auth_header = f"Basic {encoded}"
+        return self._auth_header
+
+    def _request(self, endpoint: str, params: dict[str, str] | None = None) -> dict[str, Any]:
         """Make HTTP request to Nagios API.
 
         Args:
@@ -59,24 +75,27 @@ class NagiosClient:
             print(f"DEBUG: GET {url}")
 
         opener = self._get_opener()
+        request = urllib.request.Request(url)
+        request.add_header("Authorization", self._get_auth_header())
 
         try:
-            response = opener.open(url, timeout=self.config.timeout)
+            response = opener.open(request, timeout=self.config.timeout)
             content = response.read().decode("utf-8")
 
             if self.verbose >= 3:
                 print(f"DEBUG: Response: {content[:500]}")
 
-            return json.loads(content)
+            result: dict[str, Any] = json.loads(content)
+            return result
 
         except urllib.error.HTTPError as e:
-            raise NagiosAPIError(f"HTTP {e.code}: {e.reason}")
+            raise NagiosAPIError(f"HTTP {e.code}: {e.reason}") from e
         except urllib.error.URLError as e:
-            raise NagiosAPIError(f"Connection error: {e.reason}")
+            raise NagiosAPIError(f"Connection error: {e.reason}") from e
         except json.JSONDecodeError as e:
-            raise NagiosAPIError(f"Invalid JSON response: {e}")
+            raise NagiosAPIError(f"Invalid JSON response: {e}") from e
 
-    def _post(self, endpoint: str, data: Dict[str, str]) -> str:
+    def _post(self, endpoint: str, data: dict[str, str]) -> str:
         """Make HTTP POST request to Nagios API.
 
         Args:
@@ -98,10 +117,11 @@ class NagiosClient:
 
         opener = self._get_opener()
         request = urllib.request.Request(url, data=encoded_data, method="POST")
+        request.add_header("Authorization", self._get_auth_header())
 
         try:
             response = opener.open(request, timeout=self.config.timeout)
-            content = response.read().decode("utf-8")
+            content: str = response.read().decode("utf-8")
 
             if self.verbose >= 3:
                 print(f"DEBUG: Response: {content[:500]}")
@@ -109,9 +129,9 @@ class NagiosClient:
             return content
 
         except urllib.error.HTTPError as e:
-            raise NagiosAPIError(f"HTTP {e.code}: {e.reason}")
+            raise NagiosAPIError(f"HTTP {e.code}: {e.reason}") from e
         except urllib.error.URLError as e:
-            raise NagiosAPIError(f"Connection error: {e.reason}")
+            raise NagiosAPIError(f"Connection error: {e.reason}") from e
 
     def get_service_status(self, hostname: str, service: str) -> Service:
         """Get status of a specific service.
@@ -173,7 +193,7 @@ class NagiosClient:
 
         return self._parse_host(host_data)
 
-    def get_problems(self) -> List[Service]:
+    def get_problems(self) -> list[Service]:
         """Get all services with problems (warning, critical, unknown).
 
         Returns:
@@ -205,7 +225,7 @@ class NagiosClient:
 
         return services
 
-    def get_all_hosts(self) -> List[Host]:
+    def get_all_hosts(self) -> list[Host]:
         """Get all monitored hosts.
 
         Returns:
@@ -235,7 +255,7 @@ class NagiosClient:
 
         return hosts
 
-    def get_host_services(self, hostname: str) -> List[Service]:
+    def get_host_services(self, hostname: str) -> list[Service]:
         """Get all services for a specific host.
 
         Args:
@@ -370,7 +390,7 @@ class NagiosClient:
 
         return "successfully submitted" in content.lower()
 
-    def _parse_service(self, data: Dict[str, Any]) -> Service:
+    def _parse_service(self, data: dict[str, Any]) -> Service:
         """Parse service data from API response."""
         return Service(
             host_name=data.get("host_name", ""),
@@ -386,7 +406,7 @@ class NagiosClient:
             perf_data=data.get("perf_data", ""),
         )
 
-    def _parse_host(self, data: Dict[str, Any]) -> Host:
+    def _parse_host(self, data: dict[str, Any]) -> Host:
         """Parse host data from API response."""
         return Host(
             name=data.get("name", ""),

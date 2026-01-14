@@ -1,8 +1,7 @@
 """Tests for models module."""
 
-import pytest
 
-from nagioscli.core.models import Service, Host, ServiceStatus, HostStatus
+from nagioscli.core.models import Host, HostStatus, Service, ServiceStatus
 
 
 class TestService:

@@ -3,7 +3,8 @@
 import pytest
 
 from nagioscli.core.exceptions import NotFoundError
-from nagioscli.core.models import ServiceStatus, HostStatus
+from nagioscli.core.models import HostStatus, ServiceStatus
+
 from .mock_nagios_client import MockNagiosClient
 
 

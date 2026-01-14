@@ -4,7 +4,6 @@ import configparser
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 from .exceptions import ConfigurationError
 
@@ -15,8 +14,8 @@ class NagiosConfig:
 
     url: str
     username: str
-    password: Optional[str] = None
-    pass_path: Optional[str] = None
+    password: str | None = None
+    pass_path: str | None = None
     timeout: int = 30
     verify_ssl: bool = False
 
@@ -45,7 +44,7 @@ def load_config(config_path: str = "nagioscli.ini") -> NagiosConfig:
     return _parse_config(config)
 
 
-def _find_config_file(config_path: str) -> Optional[str]:
+def _find_config_file(config_path: str) -> str | None:
     """Find configuration file in standard locations.
 
     Search order:
