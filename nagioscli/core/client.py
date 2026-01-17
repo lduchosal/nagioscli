@@ -321,7 +321,7 @@ class NagiosClient:
         Returns:
             True if command submitted successfully
         """
-        start_time = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
+        start_time = datetime.now().strftime("%m-%d-%Y %H:%M:%S")
 
         data = {
             "cmd_typ": "7",  # SCHEDULE_FORCED_SVC_CHECK
@@ -346,7 +346,7 @@ class NagiosClient:
         Returns:
             True if command submitted successfully
         """
-        start_time = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
+        start_time = datetime.now().strftime("%m-%d-%Y %H:%M:%S")
 
         data = {
             "cmd_typ": "17",  # SCHEDULE_FORCED_HOST_CHECK
