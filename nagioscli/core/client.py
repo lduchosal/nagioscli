@@ -8,7 +8,7 @@ import urllib.request
 from datetime import datetime
 from typing import Any
 
-from .auth import get_credentials
+from .auth import get_credentials, load_cached_vouch_token
 from .config import NagiosConfig
 from .exceptions import NagiosAPIError, NotFoundError
 from .models import Host, Service
@@ -28,6 +28,7 @@ class NagiosClient:
         self.verbose = verbose
         self._opener: urllib.request.OpenerDirector | None = None
         self._auth_header: str | None = None
+        self._vouch_cookie: str | None = None
 
     def _get_opener(self) -> urllib.request.OpenerDirector:
         """Get or create HTTP opener with SSL handling."""
@@ -54,6 +55,20 @@ class NagiosClient:
             self._auth_header = f"Basic {encoded}"
         return self._auth_header
 
+    def _uses_vouch_auth(self) -> bool:
+        """Check if Vouch cookie authentication is configured or cached."""
+        return self.config.vouch_cookie is not None or load_cached_vouch_token() is not None
+
+    def _get_vouch_cookie(self) -> str:
+        """Get Vouch cookie value from cache or config."""
+        if self._vouch_cookie is None:
+            cached = load_cached_vouch_token()
+            if cached:
+                self._vouch_cookie = cached
+            elif self.config.vouch_cookie:
+                self._vouch_cookie = self.config.vouch_cookie
+        return self._vouch_cookie or ""
+
     def _request(self, endpoint: str, params: dict[str, str] | None = None) -> dict[str, Any]:
         """Make HTTP request to Nagios API.
 
@@ -76,7 +91,10 @@ class NagiosClient:
 
         opener = self._get_opener()
         request = urllib.request.Request(url)
-        request.add_header("Authorization", self._get_auth_header())
+        if self._uses_vouch_auth():
+            request.add_header("Cookie", f"VouchCookie={self._get_vouch_cookie()}")
+        else:
+            request.add_header("Authorization", self._get_auth_header())
 
         try:
             response = opener.open(request, timeout=self.config.timeout)
@@ -117,7 +135,10 @@ class NagiosClient:
 
         opener = self._get_opener()
         request = urllib.request.Request(url, data=encoded_data, method="POST")
-        request.add_header("Authorization", self._get_auth_header())
+        if self._uses_vouch_auth():
+            request.add_header("Cookie", f"VouchCookie={self._get_vouch_cookie()}")
+        else:
+            request.add_header("Authorization", self._get_auth_header())
 
         try:
             response = opener.open(request, timeout=self.config.timeout)

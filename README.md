@@ -13,13 +13,16 @@ A CLI tool to manage Nagios Core via HTTP REST API.
 - Acknowledge problems
 - List hosts and services
 - JSON output support
-- Password manager (`pass`) integration
+- Multiple authentication methods:
+  - Basic auth (password, environment variable)
+  - Password manager (`pass`) integration
+  - Vouch Proxy (SSO/OAuth) support
 
 ## Installation
 
 ```bash
 # From PyPI
-pip install nagioscli
+pip install nachos
 
 # From source
 pip install git+https://github.com/lduchosal/nagioscli.git
@@ -87,6 +90,8 @@ nagioscli services web01.example.com
 | `ack-host <host> <comment>` | Acknowledge host problem |
 | `hosts` | List all monitored hosts |
 | `services <host>` | List services for a host |
+| `login` | Authenticate via Vouch Proxy (SSO) |
+| `logout` | Clear saved authentication token |
 
 ## Output Options
 
@@ -107,7 +112,9 @@ nagioscli problems -vvv
 
 ### Authentication Methods
 
-#### Password in config file
+nagioscli supports multiple authentication methods for different environments.
+
+#### Basic Auth - Password in config file
 ```ini
 [nagios]
 url = http://nagios.example.com/nagios
@@ -115,7 +122,7 @@ username = admin
 password = secret
 ```
 
-#### Password from pass (password-store)
+#### Basic Auth - Password from pass (password-store)
 ```ini
 [nagios]
 url = http://nagios.example.com/nagios
@@ -126,7 +133,7 @@ method = pass_path
 pass_path = nagios/admin
 ```
 
-#### Password from environment variable
+#### Basic Auth - Password from environment variable
 ```ini
 [nagios]
 url = http://nagios.example.com/nagios
@@ -135,6 +142,39 @@ username = admin
 [auth]
 method = env_var
 env_var = NAGIOS_PASSWORD
+```
+
+#### Vouch Proxy (SSO/OAuth)
+
+For Nagios behind [Vouch Proxy](https://github.com/vouch/vouch-proxy) with SSO authentication:
+
+```bash
+# Interactive login - opens browser, paste cookie from DevTools
+nagioscli login
+```
+
+The token is cached in `~/.nagioscli_token` and used automatically.
+
+Alternatively, set the cookie directly in config:
+```ini
+[nagios]
+url = https://nagios.example.com/nagios
+username = admin
+
+[auth]
+method = vouch_cookie
+vouch_cookie = H4sIAAAA...
+```
+
+To get the cookie value manually:
+1. Open browser to your Nagios URL
+2. Authenticate via SSO
+3. Open DevTools (F12) → Application → Cookies
+4. Copy the `VouchCookie` value
+
+To logout and clear the cached token:
+```bash
+nagioscli logout
 ```
 
 ## Exit Codes

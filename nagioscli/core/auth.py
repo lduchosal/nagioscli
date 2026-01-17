@@ -1,9 +1,24 @@
 """Authentication management for nagioscli."""
 
 import subprocess
+from pathlib import Path
 
 from .config import NagiosConfig
 from .exceptions import AuthenticationError
+
+# Token cache file location
+TOKEN_CACHE_FILE = Path.home() / ".nagioscli_token"
+
+
+def load_cached_vouch_token() -> str | None:
+    """Load Vouch token from cache file if it exists.
+
+    Returns:
+        Token string or None if not cached
+    """
+    if TOKEN_CACHE_FILE.exists():
+        return TOKEN_CACHE_FILE.read_text().strip()
+    return None
 
 
 def get_credentials(config: NagiosConfig) -> tuple[str, str]:
@@ -18,6 +33,10 @@ def get_credentials(config: NagiosConfig) -> tuple[str, str]:
     Raises:
         AuthenticationError: If credentials cannot be obtained
     """
+    # Skip credential retrieval if using Vouch cookie auth
+    if config.vouch_cookie or load_cached_vouch_token():
+        return config.username, ""
+
     username = config.username
     password = None
 
@@ -27,7 +46,7 @@ def get_credentials(config: NagiosConfig) -> tuple[str, str]:
         password = _get_password_from_pass(config.pass_path)
     else:
         raise AuthenticationError(
-            "No password configured. Set password, pass_path, or env_var in config."
+            "No password configured. Use 'nagioscli login' or set password/pass_path in config."
         )
 
     if not password:
@@ -40,7 +59,7 @@ def _get_password_from_pass(pass_path: str) -> str:
     """Retrieve password from pass (password-store).
 
     Args:
-        pass_path: Path in password store (e.g., 'nagios/claude')
+        pass_path: Path in password store (e.g., 'nagios/admin')
 
     Returns:
         Password string

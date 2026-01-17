@@ -8,7 +8,15 @@
       "Bash(./publish.sh)",
       "Bash(pip index:*)",
       "Bash(ls:*)",
-      "Bash(xargs cat:*)"
+      "Bash(xargs cat:*)",
+      "Bash(curl:*)",
+      "Bash(start \"https://monitor.arcantel.local/nagios/\")",
+      "Bash(xxd:*)",
+      "Bash(~/.nagioscli_token)",
+      "Bash(TOKEN=\"H4sIAAAAAAAA_4TQwYqrMBTG8Sfq5SYZBbemoxzppMViNO48qWA0VodYa3z6wd3sZvfxbX7wb33WYarN1WRQ7ECEAQfPPNAcQhjmSvIs-tf6jGgqPY7JUt8hhHEjygfDoxQTMtHhZ9zpUXT4zC3yoG84OBgE0SxfsRBOlXbRHsKW_Xdg41hRYTUTBdLFooEQDtTGWZ3ka0PlC_rJgHkbVcnh2FhGr6bKV22C345DKjrk219f3_BtQRrMjzTylzHxiiavRyrdZdxWRRN3WHXVvaGfNrGrD9Gr_Xoe2IVns2ZfR5wSmeybI4Y8fRepfUaAoTnVxN5sSO4noW_CBfe6SvgMC2nPs8LpJwAA__9nZWNAXQEAAA==\")",
+      "Bash(for name in VouchCookie vouch Vouch vouchidtoken)",
+      "Bash(do echo \"Testing $name:\")",
+      "Bash(done)"
     ],
     "deny": []
   }
