@@ -17,6 +17,7 @@ class NagiosConfig:
     password: str | None = None
     pass_path: str | None = None
     vouch_cookie: str | None = None
+    nginx_token: str | None = None
     timeout: int = 30
     verify_ssl: bool = False
 
@@ -94,6 +95,7 @@ def _parse_config(config: configparser.ConfigParser) -> NagiosConfig:
     password = None
     pass_path = None
     vouch_cookie = None
+    nginx_token = None
 
     if "auth" in config:
         auth_section = config["auth"]
@@ -108,6 +110,8 @@ def _parse_config(config: configparser.ConfigParser) -> NagiosConfig:
             password = os.environ.get(env_var)
         elif method == "vouch_cookie":
             vouch_cookie = auth_section.get("vouch_cookie")
+        elif method == "nginx_token":
+            nginx_token = auth_section.get("nginx_token")
     else:
         # Default: try to get password directly from nagios section
         password = nagios_section.get("password")
@@ -127,6 +131,7 @@ def _parse_config(config: configparser.ConfigParser) -> NagiosConfig:
         password=password,
         pass_path=pass_path,
         vouch_cookie=vouch_cookie,
+        nginx_token=nginx_token,
         timeout=timeout,
         verify_ssl=verify_ssl,
     )

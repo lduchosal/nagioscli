@@ -17,6 +17,7 @@ A CLI tool to manage Nagios Core via HTTP REST API.
   - Basic auth (password, environment variable)
   - Password manager (`pass`) integration
   - Vouch Proxy (SSO/OAuth) support
+  - Nginx API token (for CLI/automation)
 
 ## Installation
 
@@ -176,6 +177,67 @@ To logout and clear the cached token:
 ```bash
 nagioscli logout
 ```
+
+#### Nginx API Token
+
+For Nagios behind nginx with Vouch Proxy, you can use a static API token for CLI/automation access without requiring interactive browser authentication.
+
+This method requires nginx to be configured to accept `X-API-Key` header and map it to a Nagios user.
+
+```ini
+[nagios]
+url = https://nagios.example.com/nagios
+username = claude
+
+[auth]
+method = nginx_token
+nginx_token = your-secret-token-here
+
+[settings]
+timeout = 30
+verify_ssl = false
+```
+
+**nginx configuration:**
+
+Add to your nginx `http` block:
+```nginx
+map $http_x_api_key $api_user {
+    default "";
+    "your-secret-token-here" "claude";
+}
+
+map $http_x_api_key $api_key_valid {
+    default 0;
+    "your-secret-token-here" 1;
+}
+```
+
+Update your CGI location to check for API key:
+```nginx
+location @cgi_api {
+    try_files $uri =404;
+    include fastcgi_params;
+    fastcgi_pass unix:/var/run/fcgiwrap/nagios.socket;
+    fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+    fastcgi_param REMOTE_USER $api_user;
+}
+
+location ~ \.cgi$ {
+    if ($api_key_valid) {
+        error_page 418 = @cgi_api;
+        return 418;
+    }
+
+    # Vouch authentication fallback
+    auth_request /vouch/validate;
+    # ...
+}
+```
+
+This allows:
+- Browser users: Authenticate via Vouch/ADFS SSO
+- CLI/automation: Authenticate via static API token
 
 ## Exit Codes
 
