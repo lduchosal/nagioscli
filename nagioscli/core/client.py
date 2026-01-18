@@ -95,7 +95,7 @@ class NagiosClient:
 
         opener = self._get_opener()
         request = urllib.request.Request(url)
-        if self._uses_nginx_token_auth():
+        if self.config.nginx_token is not None:
             request.add_header("X-API-Key", self.config.nginx_token)
         elif self._uses_vouch_auth():
             request.add_header("Cookie", f"VouchCookie={self._get_vouch_cookie()}")
@@ -141,7 +141,7 @@ class NagiosClient:
 
         opener = self._get_opener()
         request = urllib.request.Request(url, data=encoded_data, method="POST")
-        if self._uses_nginx_token_auth():
+        if self.config.nginx_token is not None:
             request.add_header("X-API-Key", self.config.nginx_token)
         elif self._uses_vouch_auth():
             request.add_header("Cookie", f"VouchCookie={self._get_vouch_cookie()}")
