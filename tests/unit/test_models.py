@@ -103,8 +103,23 @@ class TestServiceStatus:
         """Test status enum values."""
         assert ServiceStatus.OK == 2
         assert ServiceStatus.WARNING == 4
-        assert ServiceStatus.CRITICAL == 8
-        assert ServiceStatus.UNKNOWN == 16
+        assert ServiceStatus.UNKNOWN == 8
+        assert ServiceStatus.CRITICAL == 16
+
+    def test_nagios_bitmap_regression(self) -> None:
+        # Pins the Nagios statusjson.cgi bitmap (cgi/statusjson.c): a swap of
+        # CRITICAL/UNKNOWN inverts every alert severity in the output.
+        assert int(ServiceStatus.UNKNOWN) == 8
+        assert int(ServiceStatus.CRITICAL) == 16
+
+        service_critical = Service(
+            host_name="h", description="s", status=16, plugin_output=""
+        )
+        service_unknown = Service(
+            host_name="h", description="s", status=8, plugin_output=""
+        )
+        assert service_critical.status_text == "CRITICAL"
+        assert service_unknown.status_text == "UNKNOWN"
 
 
 class TestHostStatus:

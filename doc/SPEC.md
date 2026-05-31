@@ -134,8 +134,8 @@ nagioscli/
 ### Service Status
 - 2 = OK
 - 4 = WARNING
-- 8 = CRITICAL
-- 16 = UNKNOWN
+- 8 = UNKNOWN
+- 16 = CRITICAL
 
 ### Host Status
 - 2 = UP

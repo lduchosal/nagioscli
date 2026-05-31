@@ -59,7 +59,7 @@ class OutputFormatter:
     @staticmethod
     def format_service_status(status: int) -> str:
         """Format service status as text."""
-        status_map = {2: "OK", 4: "WARNING", 8: "CRITICAL", 16: "UNKNOWN"}
+        status_map = {2: "OK", 4: "WARNING", 8: "UNKNOWN", 16: "CRITICAL"}
         return status_map.get(status, f"UNKNOWN({status})")
 
     @staticmethod

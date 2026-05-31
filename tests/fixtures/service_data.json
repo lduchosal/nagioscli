@@ -27,13 +27,13 @@
     "db01.example.com/DISK": {
       "host_name": "db01.example.com",
       "description": "DISK",
-      "status": 8,
+      "status": 16,
       "plugin_output": "DISK CRITICAL - free space: /var 512 MB (5% inode=90%)"
     },
     "mail01.example.com/SMTP": {
       "host_name": "mail01.example.com",
       "description": "SMTP",
-      "status": 16,
+      "status": 8,
       "plugin_output": "SMTP UNKNOWN - Connection timed out"
     }
   }

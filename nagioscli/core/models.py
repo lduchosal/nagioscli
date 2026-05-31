@@ -10,8 +10,8 @@ class ServiceStatus(IntEnum):
 
     OK = 2
     WARNING = 4
-    CRITICAL = 8
-    UNKNOWN = 16
+    UNKNOWN = 8
+    CRITICAL = 16
 
 
 class HostStatus(IntEnum):

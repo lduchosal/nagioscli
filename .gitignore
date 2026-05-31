@@ -13,3 +13,4 @@ htmlcov/
 .idea/
 *.egg-info/
 pdm.lock
+.ken
