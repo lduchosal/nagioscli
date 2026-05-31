@@ -111,7 +111,10 @@ class TestCsrfPreflight:
         assert "NagFormId=COOKIE-42" in cookie_header
         assert post_request.get_header("Authorization", "").startswith("Basic ")
 
-    def test_force_host_check_uses_cmd_typ_17(self) -> None:
+    def test_force_host_check_uses_cmd_typ_96(self) -> None:
+        # cmd_typ=96 is SCHEDULE_FORCED_HOST_CHECK (the host's own check_command).
+        # cmd_typ=17 is SCHEDULE_FORCED_HOST_SVC_CHECKS (all services of host) —
+        # covered separately by test_force_host_services_check.
         opener = MagicMock()
         opener.open.side_effect = [
             _make_response(
@@ -125,12 +128,36 @@ class TestCsrfPreflight:
         assert client.force_host_check("host01") is True
 
         preflight_url = opener.open.call_args_list[0][0][0].full_url
-        assert "cmd_typ=17" in preflight_url
+        assert "cmd_typ=96" in preflight_url
         assert "service=" not in preflight_url  # host-only command
 
         body = _decode_post_body(opener.open.call_args_list[1])
-        assert body["cmd_typ"] == "17"
+        assert body["cmd_typ"] == "96"
         assert body["nagFormId"] == "H"
+        assert "service" not in body
+
+    def test_force_host_services_check_uses_cmd_typ_17(self) -> None:
+        # cmd_typ=17 schedules a forced check of every service attached to
+        # the host — distinct from cmd_typ=96 which runs the host check itself.
+        opener = MagicMock()
+        opener.open.side_effect = [
+            _make_response(
+                body="<input type='hidden' name='nagFormId' value='S'>",
+                set_cookies=["NagFormId=SC"],
+            ),
+            _make_response(body="successfully submitted"),
+        ]
+        client = _client_with_opener(opener)
+
+        assert client.force_host_services_check("host01") is True
+
+        preflight_url = opener.open.call_args_list[0][0][0].full_url
+        assert "cmd_typ=17" in preflight_url
+        assert "service=" not in preflight_url
+
+        body = _decode_post_body(opener.open.call_args_list[1])
+        assert body["cmd_typ"] == "17"
+        assert body["nagFormId"] == "S"
 
     def test_ack_service_uses_cmd_typ_34(self) -> None:
         opener = MagicMock()

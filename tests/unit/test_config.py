@@ -124,6 +124,26 @@ pass_path = nagios/testuser
 class TestNagiosConfig:
     """Tests for NagiosConfig dataclass."""
 
+    def test_start_time_format_with_percent_loads(self) -> None:
+        # Regression: ConfigParser's default %(name)s interpolation rejected
+        # raw strftime patterns. Loading must not raise InterpolationSyntaxError.
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".ini", delete=False) as f:
+            f.write("""
+[nagios]
+url = http://nagios.example.com/nagios
+username = u
+password = p
+
+[settings]
+start_time_format = %d-%m-%Y %H:%M:%S
+""")
+            f.flush()
+            try:
+                config = load_config(f.name)
+                assert config.start_time_format == "%d-%m-%Y %H:%M:%S"
+            finally:
+                os.unlink(f.name)
+
     def test_default_values(self) -> None:
         """Test default values are set correctly."""
         config = NagiosConfig(

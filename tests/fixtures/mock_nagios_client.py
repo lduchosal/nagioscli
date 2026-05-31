@@ -101,6 +101,10 @@ class MockNagiosClient:
         """Mock force host check."""
         return True
 
+    def force_host_services_check(self, hostname: str) -> bool:
+        """Mock force check of all services of a host."""
+        return True
+
     def acknowledge_service(self, hostname: str, service: str, comment: str) -> bool:
         """Mock acknowledge service."""
         return True

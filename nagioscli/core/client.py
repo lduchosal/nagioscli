@@ -427,7 +427,39 @@ class NagiosClient:
         return "successfully submitted" in content.lower()
 
     def force_host_check(self, hostname: str) -> bool:
-        """Force immediate host check.
+        """Force immediate host check (runs the host's own check_command).
+
+        Args:
+            hostname: Host name
+
+        Returns:
+            True if command submitted successfully
+        """
+        start_time = datetime.now().strftime(self.config.start_time_format)
+
+        # cmd_typ=96 is SCHEDULE_FORCED_HOST_CHECK on Nagios Core 4.x.
+        # cmd_typ=17 reschedules every service of the host instead — exposed
+        # as `force_host_services_check` below.
+        data = {
+            "cmd_typ": "96",  # SCHEDULE_FORCED_HOST_CHECK
+            "cmd_mod": "2",  # CMDMODE_COMMIT
+            "host": hostname,
+            "start_time": start_time,
+            "force_check": "on",
+            "btnSubmit": "Commit",
+        }
+        preflight = {"cmd_typ": "96", "host": hostname}
+
+        content = self._cmd_post(data, preflight)
+
+        return "successfully submitted" in content.lower()
+
+    def force_host_services_check(self, hostname: str) -> bool:
+        """Force immediate check of every service of a host.
+
+        Note: this does NOT run the host's own check_command — use
+        ``force_host_check`` for that. cmd_typ=17 corresponds to
+        SCHEDULE_FORCED_HOST_SVC_CHECKS on Nagios Core 4.x.
 
         Args:
             hostname: Host name
@@ -438,7 +470,7 @@ class NagiosClient:
         start_time = datetime.now().strftime(self.config.start_time_format)
 
         data = {
-            "cmd_typ": "17",  # SCHEDULE_FORCED_HOST_CHECK
+            "cmd_typ": "17",  # SCHEDULE_FORCED_HOST_SVC_CHECKS
             "cmd_mod": "2",  # CMDMODE_COMMIT
             "host": hostname,
             "start_time": start_time,

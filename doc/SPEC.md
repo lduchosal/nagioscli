@@ -37,7 +37,8 @@ nagioscli provides a command-line interface to interact with Nagios Core's JSON 
 | Command | Description |
 |---------|-------------|
 | `nagioscli check <host> <service>` | Force immediate service check |
-| `nagioscli check-host <host>` | Force immediate host check |
+| `nagioscli check-host <host>` | Force immediate host check (runs the host's check_command, cmd_typ=96) |
+| `nagioscli check-host-services <host>` | Force immediate check of every service of a host (cmd_typ=17) |
 | `nagioscli ack <host> <service> <comment>` | Acknowledge service problem |
 | `nagioscli ack-host <host> <comment>` | Acknowledge host problem |
 | `nagioscli downtime <host> <service> <duration> <comment>` | Schedule service downtime |

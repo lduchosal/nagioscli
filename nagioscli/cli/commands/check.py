@@ -51,7 +51,7 @@ def register_check_commands(main_group: Any) -> None:
         config: str,
         verbose: int,
     ) -> None:
-        """Force immediate host check."""
+        """Force immediate host check (runs the host's own check_command)."""
         try:
             cfg = load_config(config)
             client = NagiosClient(cfg, verbose=verbose)
@@ -64,6 +64,35 @@ def register_check_commands(main_group: Any) -> None:
                 click.echo(f"Force check submitted for host {hostname}")
             else:
                 click.echo(f"Failed to submit force check for host {hostname}")
+
+        except Exception as e:
+            handle_error(e, verbose)
+
+    @main_group.command("check-host-services")
+    @click.argument("hostname")
+    @common_options
+    def check_host_services_cmd(
+        hostname: str,
+        config: str,
+        verbose: int,
+    ) -> None:
+        """Force immediate check of every service of a host."""
+        try:
+            cfg = load_config(config)
+            client = NagiosClient(cfg, verbose=verbose)
+
+            OutputFormatter.format_verbose(
+                f"Forcing check of all services for host {hostname}", verbose
+            )
+
+            success = client.force_host_services_check(hostname)
+
+            if success:
+                click.echo(f"Force check of all services submitted for host {hostname}")
+            else:
+                click.echo(
+                    f"Failed to submit force check of all services for host {hostname}"
+                )
 
         except Exception as e:
             handle_error(e, verbose)

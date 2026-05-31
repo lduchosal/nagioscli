@@ -35,7 +35,10 @@ def load_config(config_path: str = "nagioscli.ini") -> NagiosConfig:
     Raises:
         ConfigurationError: If configuration is invalid
     """
-    config = configparser.ConfigParser()
+    # interpolation=None: strftime patterns like %d-%m-%Y in start_time_format
+    # contain literal `%` which would otherwise trigger ConfigParser's `%(name)s`
+    # interpolation and crash on load.
+    config = configparser.ConfigParser(interpolation=None)
 
     config_file = _find_config_file(config_path)
 
