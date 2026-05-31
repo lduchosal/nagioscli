@@ -20,6 +20,7 @@ class NagiosConfig:
     nginx_token: str | None = None
     timeout: int = 30
     verify_ssl: bool = False
+    start_time_format: str = "%m-%d-%Y %H:%M:%S"
 
 
 def load_config(config_path: str = "nagioscli.ini") -> NagiosConfig:
@@ -119,11 +120,13 @@ def _parse_config(config: configparser.ConfigParser) -> NagiosConfig:
     # Settings
     timeout = 30
     verify_ssl = False
+    start_time_format = "%m-%d-%Y %H:%M:%S"
 
     if "settings" in config:
         settings_section = config["settings"]
         timeout = settings_section.getint("timeout", 30)
         verify_ssl = settings_section.getboolean("verify_ssl", False)
+        start_time_format = settings_section.get("start_time_format", start_time_format)
 
     return NagiosConfig(
         url=url,
@@ -134,4 +137,5 @@ def _parse_config(config: configparser.ConfigParser) -> NagiosConfig:
         nginx_token=nginx_token,
         timeout=timeout,
         verify_ssl=verify_ssl,
+        start_time_format=start_time_format,
     )

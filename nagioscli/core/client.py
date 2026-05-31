@@ -2,6 +2,7 @@
 
 import base64
 import json
+import re
 import ssl
 import urllib.parse
 import urllib.request
@@ -12,6 +13,17 @@ from .auth import get_credentials, load_cached_vouch_token
 from .config import NagiosConfig
 from .exceptions import NagiosAPIError, NotFoundError
 from .models import Host, Service
+
+# CSRF token plumbing for Nagios Core 4.4+. The cmd.cgi flow is:
+#   GET cmd.cgi?cmd_typ=... -> Set-Cookie: NagFormId=<value>
+#                              + <input type=hidden name=nagFormId value=<same>>
+#   POST cmd.cgi must echo both, or the server returns
+#   "Error: Invalid or missing CSRF cookie!".
+_NAGFORM_INPUT_RE = re.compile(
+    r"""<input[^>]*\bname=['"]nagFormId['"][^>]*\bvalue=['"]([^'"]+)['"]""",
+    re.IGNORECASE,
+)
+_NAGFORM_COOKIE_RE = re.compile(r"\bNagFormId=([^;\s]+)")
 
 
 class NagiosClient:
@@ -119,12 +131,74 @@ class NagiosClient:
         except json.JSONDecodeError as e:
             raise NagiosAPIError(f"Invalid JSON response: {e}") from e
 
-    def _post(self, endpoint: str, data: dict[str, str]) -> str:
+    def _apply_auth(self, request: urllib.request.Request, extra_cookies: dict[str, str] | None = None) -> None:
+        """Attach the configured auth header and any extra cookies to ``request``."""
+        cookies: dict[str, str] = {}
+        if extra_cookies:
+            cookies.update(extra_cookies)
+
+        if self.config.nginx_token is not None:
+            request.add_header("X-API-Key", self.config.nginx_token)
+        elif self._uses_vouch_auth():
+            cookies.setdefault("VouchCookie", self._get_vouch_cookie())
+        else:
+            request.add_header("Authorization", self._get_auth_header())
+
+        if cookies:
+            request.add_header("Cookie", "; ".join(f"{k}={v}" for k, v in cookies.items()))
+
+    def _csrf_preflight(self, preflight_params: dict[str, str]) -> tuple[str, str]:
+        """GET cmd.cgi to obtain the CSRF cookie + hidden form token.
+
+        Required since Nagios Core 4.4: every cmd.cgi POST must echo
+        the NagFormId cookie and the matching nagFormId hidden field.
+
+        Returns:
+            (cookie value, hidden-field value). Either may be empty if
+            the server didn't issue one — the caller should still POST
+            so the original error surfaces to the user.
+        """
+        url = f"{self.config.url}/cgi-bin/cmd.cgi?{urllib.parse.urlencode(preflight_params)}"
+
+        if self.verbose >= 2:
+            print(f"DEBUG: CSRF preflight GET {url}")
+
+        opener = self._get_opener()
+        request = urllib.request.Request(url)
+        self._apply_auth(request)
+
+        try:
+            response = opener.open(request, timeout=self.config.timeout)
+            body = response.read().decode("utf-8", errors="replace")
+        except urllib.error.HTTPError as e:
+            raise NagiosAPIError(f"HTTP {e.code} on CSRF preflight: {e.reason}") from e
+        except urllib.error.URLError as e:
+            raise NagiosAPIError(f"Connection error on CSRF preflight: {e.reason}") from e
+
+        cookie_value = ""
+        # response.headers may be email.message.Message; get_all handles repeated headers.
+        for set_cookie in response.headers.get_all("Set-Cookie") or []:
+            m = _NAGFORM_COOKIE_RE.search(set_cookie)
+            if m:
+                cookie_value = m.group(1)
+                break
+
+        token_match = _NAGFORM_INPUT_RE.search(body)
+        token = token_match.group(1) if token_match else ""
+
+        if self.verbose >= 3:
+            print(f"DEBUG: CSRF cookie={'<got>' if cookie_value else '<missing>'} "
+                  f"token={'<got>' if token else '<missing>'}")
+
+        return cookie_value, token
+
+    def _post(self, endpoint: str, data: dict[str, str], csrf_cookie: str = "") -> str:
         """Make HTTP POST request to Nagios API.
 
         Args:
             endpoint: API endpoint (e.g., 'cmd.cgi')
             data: POST data
+            csrf_cookie: optional NagFormId cookie value to send alongside auth
 
         Returns:
             Response content
@@ -141,12 +215,8 @@ class NagiosClient:
 
         opener = self._get_opener()
         request = urllib.request.Request(url, data=encoded_data, method="POST")
-        if self.config.nginx_token is not None:
-            request.add_header("X-API-Key", self.config.nginx_token)
-        elif self._uses_vouch_auth():
-            request.add_header("Cookie", f"VouchCookie={self._get_vouch_cookie()}")
-        else:
-            request.add_header("Authorization", self._get_auth_header())
+        extra_cookies = {"NagFormId": csrf_cookie} if csrf_cookie else None
+        self._apply_auth(request, extra_cookies=extra_cookies)
 
         try:
             response = opener.open(request, timeout=self.config.timeout)
@@ -161,6 +231,16 @@ class NagiosClient:
             raise NagiosAPIError(f"HTTP {e.code}: {e.reason}") from e
         except urllib.error.URLError as e:
             raise NagiosAPIError(f"Connection error: {e.reason}") from e
+
+    def _cmd_post(self, data: dict[str, str], preflight_params: dict[str, str]) -> str:
+        """POST to cmd.cgi with the Nagios 4.4+ CSRF preflight.
+
+        Issues a GET to seed the NagFormId cookie + read the hidden
+        nagFormId field, then POSTs with both attached.
+        """
+        cookie_value, token = self._csrf_preflight(preflight_params)
+        data_with_token = {**data, "nagFormId": token}
+        return self._post("cmd.cgi", data_with_token, csrf_cookie=cookie_value)
 
     def get_service_status(self, hostname: str, service: str) -> Service:
         """Get status of a specific service.
@@ -329,7 +409,7 @@ class NagiosClient:
         Returns:
             True if command submitted successfully
         """
-        start_time = datetime.now().strftime("%m-%d-%Y %H:%M:%S")
+        start_time = datetime.now().strftime(self.config.start_time_format)
 
         data = {
             "cmd_typ": "7",  # SCHEDULE_FORCED_SVC_CHECK
@@ -340,8 +420,9 @@ class NagiosClient:
             "force_check": "on",
             "btnSubmit": "Commit",
         }
+        preflight = {"cmd_typ": "7", "host": hostname, "service": service}
 
-        content = self._post("cmd.cgi", data)
+        content = self._cmd_post(data, preflight)
 
         return "successfully submitted" in content.lower()
 
@@ -354,7 +435,7 @@ class NagiosClient:
         Returns:
             True if command submitted successfully
         """
-        start_time = datetime.now().strftime("%m-%d-%Y %H:%M:%S")
+        start_time = datetime.now().strftime(self.config.start_time_format)
 
         data = {
             "cmd_typ": "17",  # SCHEDULE_FORCED_HOST_CHECK
@@ -364,8 +445,9 @@ class NagiosClient:
             "force_check": "on",
             "btnSubmit": "Commit",
         }
+        preflight = {"cmd_typ": "17", "host": hostname}
 
-        content = self._post("cmd.cgi", data)
+        content = self._cmd_post(data, preflight)
 
         return "successfully submitted" in content.lower()
 
@@ -390,8 +472,9 @@ class NagiosClient:
             "send_notification": "on",
             "btnSubmit": "Commit",
         }
+        preflight = {"cmd_typ": "34", "host": hostname, "service": service}
 
-        content = self._post("cmd.cgi", data)
+        content = self._cmd_post(data, preflight)
 
         return "successfully submitted" in content.lower()
 
@@ -414,8 +497,9 @@ class NagiosClient:
             "send_notification": "on",
             "btnSubmit": "Commit",
         }
+        preflight = {"cmd_typ": "33", "host": hostname}
 
-        content = self._post("cmd.cgi", data)
+        content = self._cmd_post(data, preflight)
 
         return "successfully submitted" in content.lower()
 

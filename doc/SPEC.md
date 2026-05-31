@@ -72,6 +72,8 @@ pass_path = nagios/claude
 [settings]
 timeout = 30
 verify_ssl = false
+# Match the server's cgi.cfg date_format (us / euro / iso8601):
+start_time_format = %m-%d-%Y %H:%M:%S
 ```
 
 ## Architecture
