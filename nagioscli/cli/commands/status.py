@@ -7,9 +7,62 @@ import click
 
 from nagioscli.core.client import NagiosClient
 from nagioscli.core.config import load_config
+from nagioscli.core.models import Host, Service
 
 from ..decorators import common_options, output_options
 from ..handlers import OutputFormatter, handle_error
+
+
+def _emit_service_json(svc: Service) -> None:
+    output = {
+        "host": svc.host_name,
+        "service": svc.description,
+        "status": svc.status,
+        "status_text": svc.status_text,
+        "output": svc.plugin_output,
+        "checks_enabled": svc.checks_enabled,
+        "notifications_enabled": svc.notifications_enabled,
+        "acknowledged": svc.problem_acknowledged,
+        "downtime": svc.scheduled_downtime,
+    }
+    click.echo(json.dumps(output, indent=2))
+
+
+def _emit_service_text(svc: Service) -> None:
+    click.echo(f"Host: {svc.host_name}")
+    click.echo(f"Service: {svc.description}")
+    click.echo(f"Status: {svc.status_text}")
+    click.echo(f"Output: {svc.plugin_output}")
+    if svc.problem_acknowledged:
+        click.echo("Acknowledged: Yes")
+    if svc.scheduled_downtime:
+        click.echo("Downtime: Yes")
+
+
+def _emit_host_json(host: Host) -> None:
+    output = {
+        "host": host.name,
+        "address": host.address,
+        "status": host.status,
+        "status_text": host.status_text,
+        "output": host.plugin_output,
+        "checks_enabled": host.checks_enabled,
+        "notifications_enabled": host.notifications_enabled,
+        "acknowledged": host.problem_acknowledged,
+        "downtime": host.scheduled_downtime,
+    }
+    click.echo(json.dumps(output, indent=2))
+
+
+def _emit_host_text(host: Host) -> None:
+    click.echo(f"Host: {host.name}")
+    click.echo(f"Address: {host.address}")
+    click.echo(f"Status: {host.status_text}")
+    click.echo(f"Output: {host.plugin_output}")
+    if host.problem_acknowledged:
+        click.echo("Acknowledged: Yes")
+    if host.scheduled_downtime:
+        click.echo("Downtime: Yes")
 
 
 def register_status_commands(main_group: Any) -> None:
@@ -45,30 +98,11 @@ def register_status_commands(main_group: Any) -> None:
             svc = client.get_service_status(hostname, service)
 
             if output_json:
-                output = {
-                    "host": svc.host_name,
-                    "service": svc.description,
-                    "status": svc.status,
-                    "status_text": svc.status_text,
-                    "output": svc.plugin_output,
-                    "checks_enabled": svc.checks_enabled,
-                    "notifications_enabled": svc.notifications_enabled,
-                    "acknowledged": svc.problem_acknowledged,
-                    "downtime": svc.scheduled_downtime,
-                }
-                click.echo(json.dumps(output, indent=2))
+                _emit_service_json(svc)
             elif quiet:
                 click.echo(svc.status_text)
             else:
-                click.echo(f"Host: {svc.host_name}")
-                click.echo(f"Service: {svc.description}")
-                click.echo(f"Status: {svc.status_text}")
-                click.echo(f"Output: {svc.plugin_output}")
-
-                if svc.problem_acknowledged:
-                    click.echo("Acknowledged: Yes")
-                if svc.scheduled_downtime:
-                    click.echo("Downtime: Yes")
+                _emit_service_text(svc)
 
         except Exception as e:
             handle_error(e, verbose)
@@ -94,30 +128,11 @@ def register_status_commands(main_group: Any) -> None:
             host = client.get_host_status(hostname)
 
             if output_json:
-                output = {
-                    "host": host.name,
-                    "address": host.address,
-                    "status": host.status,
-                    "status_text": host.status_text,
-                    "output": host.plugin_output,
-                    "checks_enabled": host.checks_enabled,
-                    "notifications_enabled": host.notifications_enabled,
-                    "acknowledged": host.problem_acknowledged,
-                    "downtime": host.scheduled_downtime,
-                }
-                click.echo(json.dumps(output, indent=2))
+                _emit_host_json(host)
             elif quiet:
                 click.echo(host.status_text)
             else:
-                click.echo(f"Host: {host.name}")
-                click.echo(f"Address: {host.address}")
-                click.echo(f"Status: {host.status_text}")
-                click.echo(f"Output: {host.plugin_output}")
-
-                if host.problem_acknowledged:
-                    click.echo("Acknowledged: Yes")
-                if host.scheduled_downtime:
-                    click.echo("Downtime: Yes")
+                _emit_host_text(host)
 
         except Exception as e:
             handle_error(e, verbose)

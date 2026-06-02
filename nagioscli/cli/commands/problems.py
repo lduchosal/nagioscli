@@ -8,9 +8,33 @@ import click
 
 from nagioscli.core.client import NagiosClient
 from nagioscli.core.config import load_config
+from nagioscli.core.models import Service
 
 from ..decorators import common_options, output_options
 from ..handlers import OutputFormatter, handle_error
+
+
+def _emit_problems_json(services: list[Service]) -> None:
+    output = [
+        {
+            "host": svc.host_name,
+            "service": svc.description,
+            "status": svc.status,
+            "status_text": OutputFormatter.format_service_status(svc.status),
+        }
+        for svc in services
+    ]
+    click.echo(json.dumps(output, indent=2))
+
+
+def _emit_problems_text(services: list[Service]) -> None:
+    if not services:
+        click.echo("No problems found")
+        return
+    for svc in services:
+        status_text = OutputFormatter.format_service_status(svc.status)
+        click.echo(f"{status_text:8} {svc.host_name} / {svc.description}")
+    click.echo(f"\nTotal: {len(services)} problem(s)")
 
 
 def register_problems_commands(main_group: Any) -> None:
@@ -35,27 +59,11 @@ def register_problems_commands(main_group: Any) -> None:
             services = client.get_problems()
 
             if output_json:
-                output = [
-                    {
-                        "host": svc.host_name,
-                        "service": svc.description,
-                        "status": svc.status,
-                        "status_text": OutputFormatter.format_service_status(svc.status),
-                    }
-                    for svc in services
-                ]
-                click.echo(json.dumps(output, indent=2))
+                _emit_problems_json(services)
             elif quiet:
                 sys.exit(0 if len(services) == 0 else 1)
             else:
-                if not services:
-                    click.echo("No problems found")
-                else:
-                    for svc in services:
-                        status_text = OutputFormatter.format_service_status(svc.status)
-                        click.echo(f"{status_text:8} {svc.host_name} / {svc.description}")
-
-                    click.echo(f"\nTotal: {len(services)} problem(s)")
+                _emit_problems_text(services)
 
         except Exception as e:
             handle_error(e, verbose)

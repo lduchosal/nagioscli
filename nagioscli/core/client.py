@@ -14,6 +14,10 @@ from .config import NagiosConfig
 from .exceptions import NagiosAPIError, NotFoundError
 from .models import Host, Service
 
+_STATUS_JSON_CGI = "statusjson.cgi"
+_UNKNOWN_ERROR = "Unknown error"
+_SUCCESS_MARKER = "successfully submitted"
+
 # CSRF token plumbing for Nagios Core 4.4+. The cmd.cgi flow is:
 #   GET cmd.cgi?cmd_typ=... -> Set-Cookie: NagFormId=<value>
 #                              + <input type=hidden name=nagFormId value=<same>>
@@ -48,9 +52,11 @@ class NagiosClient:
             handlers: list[urllib.request.BaseHandler] = []
 
             if not self.config.verify_ssl:
+                # Opt-in insecure mode: many Nagios installs use self-signed certs,
+                # so users can disable verification by setting verify_ssl=False.
                 ssl_context = ssl.create_default_context()
-                ssl_context.check_hostname = False
-                ssl_context.verify_mode = ssl.CERT_NONE
+                ssl_context.check_hostname = False  # NOSONAR: explicit user opt-in via verify_ssl=False
+                ssl_context.verify_mode = ssl.CERT_NONE  # NOSONAR: explicit user opt-in via verify_ssl=False
                 https_handler = urllib.request.HTTPSHandler(context=ssl_context)
                 handlers.append(https_handler)
 
@@ -262,10 +268,10 @@ class NagiosClient:
             "servicedescription": service,
         }
 
-        data = self._request("statusjson.cgi", params)
+        data = self._request(_STATUS_JSON_CGI, params)
 
         if data.get("result", {}).get("type_code") != 0:
-            raise NagiosAPIError(data.get("result", {}).get("message", "Unknown error"))
+            raise NagiosAPIError(data.get("result", {}).get("message", _UNKNOWN_ERROR))
 
         svc_data = data.get("data", {}).get("service")
         if not svc_data:
@@ -291,10 +297,10 @@ class NagiosClient:
             "hostname": hostname,
         }
 
-        data = self._request("statusjson.cgi", params)
+        data = self._request(_STATUS_JSON_CGI, params)
 
         if data.get("result", {}).get("type_code") != 0:
-            raise NagiosAPIError(data.get("result", {}).get("message", "Unknown error"))
+            raise NagiosAPIError(data.get("result", {}).get("message", _UNKNOWN_ERROR))
 
         host_data = data.get("data", {}).get("host")
         if not host_data:
@@ -313,10 +319,10 @@ class NagiosClient:
             "servicestatus": "warning critical unknown",
         }
 
-        data = self._request("statusjson.cgi", params)
+        data = self._request(_STATUS_JSON_CGI, params)
 
         if data.get("result", {}).get("type_code") != 0:
-            raise NagiosAPIError(data.get("result", {}).get("message", "Unknown error"))
+            raise NagiosAPIError(data.get("result", {}).get("message", _UNKNOWN_ERROR))
 
         services = []
         servicelist = data.get("data", {}).get("servicelist", {})
@@ -344,10 +350,10 @@ class NagiosClient:
             "query": "hostlist",
         }
 
-        data = self._request("statusjson.cgi", params)
+        data = self._request(_STATUS_JSON_CGI, params)
 
         if data.get("result", {}).get("type_code") != 0:
-            raise NagiosAPIError(data.get("result", {}).get("message", "Unknown error"))
+            raise NagiosAPIError(data.get("result", {}).get("message", _UNKNOWN_ERROR))
 
         hosts = []
         hostlist = data.get("data", {}).get("hostlist", {})
@@ -378,10 +384,10 @@ class NagiosClient:
             "hostname": hostname,
         }
 
-        data = self._request("statusjson.cgi", params)
+        data = self._request(_STATUS_JSON_CGI, params)
 
         if data.get("result", {}).get("type_code") != 0:
-            raise NagiosAPIError(data.get("result", {}).get("message", "Unknown error"))
+            raise NagiosAPIError(data.get("result", {}).get("message", _UNKNOWN_ERROR))
 
         services = []
         servicelist = data.get("data", {}).get("servicelist", {})
@@ -424,7 +430,7 @@ class NagiosClient:
 
         content = self._cmd_post(data, preflight)
 
-        return "successfully submitted" in content.lower()
+        return _SUCCESS_MARKER in content.lower()
 
     def force_host_check(self, hostname: str) -> bool:
         """Force immediate host check (runs the host's own check_command).
@@ -452,7 +458,7 @@ class NagiosClient:
 
         content = self._cmd_post(data, preflight)
 
-        return "successfully submitted" in content.lower()
+        return _SUCCESS_MARKER in content.lower()
 
     def force_host_services_check(self, hostname: str) -> bool:
         """Force immediate check of every service of a host.
@@ -481,7 +487,7 @@ class NagiosClient:
 
         content = self._cmd_post(data, preflight)
 
-        return "successfully submitted" in content.lower()
+        return _SUCCESS_MARKER in content.lower()
 
     def acknowledge_service(self, hostname: str, service: str, comment: str) -> bool:
         """Acknowledge a service problem.
@@ -508,7 +514,7 @@ class NagiosClient:
 
         content = self._cmd_post(data, preflight)
 
-        return "successfully submitted" in content.lower()
+        return _SUCCESS_MARKER in content.lower()
 
     def acknowledge_host(self, hostname: str, comment: str) -> bool:
         """Acknowledge a host problem.
@@ -533,7 +539,7 @@ class NagiosClient:
 
         content = self._cmd_post(data, preflight)
 
-        return "successfully submitted" in content.lower()
+        return _SUCCESS_MARKER in content.lower()
 
     def _parse_service(self, data: dict[str, Any]) -> Service:
         """Parse service data from API response."""
