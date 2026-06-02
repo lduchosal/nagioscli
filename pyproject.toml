@@ -101,7 +101,7 @@ lint = "ruff check nagioscli/ tests/"
 lint-fix = "ruff check --fix nagioscli/ tests/"
 format-check = "black --check nagioscli/ tests/"
 interrogate = "interrogate nagioscli/"
-test-cov-xml = "env PYTHONPATH=src python -m pytest tests/ --cov=nagioscli --cov-report=xml --cov-report=term"
+test-cov-xml = "env PYTHONPATH=src python -m pytest tests/ --cov=nagioscli --cov-report=xml --cov-report=term --cov-fail-under=80"
 check = ["lint", "format-check", "typecheck", "test"]
 clean = "rm -rf .coverage htmlcov/ .pytest_cache/ __pycache__/ nagioscli/__pycache__/"
 version-patch = "pdm bump patch"
