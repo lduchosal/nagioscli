@@ -39,6 +39,7 @@ dev = [
     "ruff>=0.1.0",
     "pdm>=2.0.0",
     "pdm-bump",
+    "interrogate>=1.7.0",
 ]
 
 [project.urls]
@@ -99,6 +100,8 @@ test-cov = "env PYTHONPATH=src python -m pytest tests/ -v --cov=nagioscli --cov-
 lint = "ruff check nagioscli/ tests/"
 lint-fix = "ruff check --fix nagioscli/ tests/"
 format-check = "black --check nagioscli/ tests/"
+interrogate = "interrogate nagioscli/"
+test-cov-xml = "env PYTHONPATH=src python -m pytest tests/ --cov=nagioscli --cov-report=xml --cov-report=term"
 check = ["lint", "format-check", "typecheck", "test"]
 clean = "rm -rf .coverage htmlcov/ .pytest_cache/ __pycache__/ nagioscli/__pycache__/"
 version-patch = "pdm bump patch"
@@ -117,3 +120,11 @@ target-version = "py310"
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "C4"]
 ignore = ["E501"]
+
+[tool.interrogate]
+fail-under = 0
+ignore-init-method = true
+ignore-init-module = true
+exclude = ["tests", "docs", "build", "dist"]
+generate-badge = "."
+badge-format = "svg"
