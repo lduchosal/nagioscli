@@ -1,7 +1,20 @@
 # nagioscli
 
-[![Python Version](https://img.shields.io/badge/python-3.10+-blue.svg)](https://python.org)
+[![PyPI version](https://img.shields.io/pypi/v/nachos.svg)](https://pypi.org/project/nachos/)
+[![Python versions](https://img.shields.io/pypi/pyversions/nachos.svg)](https://pypi.org/project/nachos/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Build](https://github.com/lduchosal/nagioscli/actions/workflows/python-package.yml/badge.svg)](https://github.com/lduchosal/nagioscli/actions/workflows/python-package.yml)
+[![Publish](https://github.com/lduchosal/nagioscli/actions/workflows/python-publish.yml/badge.svg)](https://github.com/lduchosal/nagioscli/actions/workflows/python-publish.yml)
+[![codecov](https://codecov.io/gh/lduchosal/nagioscli/branch/main/graph/badge.svg)](https://codecov.io/gh/lduchosal/nagioscli)
+[![Docstring coverage](./interrogate_badge.svg)](./interrogate_badge.svg)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=lduchosal_nagioscli&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=lduchosal_nagioscli)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=lduchosal_nagioscli&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=lduchosal_nagioscli)
+[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=lduchosal_nagioscli&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=lduchosal_nagioscli)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=lduchosal_nagioscli&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=lduchosal_nagioscli)
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=lduchosal_nagioscli&metric=bugs)](https://sonarcloud.io/summary/new_code?id=lduchosal_nagioscli)
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=lduchosal_nagioscli&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=lduchosal_nagioscli)
+[![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=lduchosal_nagioscli&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=lduchosal_nagioscli)
+[![Technical Debt](https://sonarcloud.io/api/project_badges/measure?project=lduchosal_nagioscli&metric=sqale_index)](https://sonarcloud.io/summary/new_code?id=lduchosal_nagioscli)
 
 A CLI tool to manage Nagios Core via HTTP REST API.
 
