@@ -20,7 +20,6 @@ from nagioscli.core.exceptions import (
 )
 from nagioscli.core.models import Host, Service
 
-
 # ---------------------------------------------------------------- helpers ----
 
 
