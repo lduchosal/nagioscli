@@ -292,6 +292,96 @@ class TestCheck:
         assert result.exit_code == 4
 
 
+# ----------------------------------------------------------- check-problems --
+
+
+class TestCheckProblems:
+    def test_forces_all_problem_services(
+        self, runner: CliRunner, cli: object, mock_client: MagicMock
+    ) -> None:
+        mock_client.get_problems.return_value = [
+            _svc(host="web01", desc="PKGVULN", status=16),
+            _svc(host="db01", desc="MySQL", status=4),
+        ]
+        mock_client.force_service_check.return_value = True
+        result = runner.invoke(cli, ["check-problems"])
+        assert result.exit_code == 0
+        assert mock_client.force_service_check.call_count == 2
+        assert "Force check submitted for web01/PKGVULN (CRITICAL)" in result.output
+        assert "Force check submitted for db01/MySQL (WARNING)" in result.output
+        assert "Submitted 2/2 force check(s)" in result.output
+
+    def test_service_filter_is_case_insensitive(
+        self, runner: CliRunner, cli: object, mock_client: MagicMock
+    ) -> None:
+        mock_client.get_problems.return_value = [
+            _svc(host="web01", desc="PKGVULN", status=16),
+            _svc(host="db01", desc="MySQL", status=4),
+            _svc(host="mail01", desc="PKGVULN", status=8),
+        ]
+        mock_client.force_service_check.return_value = True
+        result = runner.invoke(cli, ["check-problems", "pkgvuln"])
+        assert result.exit_code == 0
+        assert mock_client.force_service_check.call_count == 2
+        mock_client.force_service_check.assert_any_call("web01", "PKGVULN")
+        mock_client.force_service_check.assert_any_call("mail01", "PKGVULN")
+        assert "MySQL" not in result.output
+        assert "Submitted 2/2 force check(s)" in result.output
+
+    def test_no_problems(
+        self, runner: CliRunner, cli: object, mock_client: MagicMock
+    ) -> None:
+        mock_client.get_problems.return_value = []
+        result = runner.invoke(cli, ["check-problems"])
+        assert result.exit_code == 0
+        assert "No services in error" in result.output
+        mock_client.force_service_check.assert_not_called()
+
+    def test_no_problems_matching_filter(
+        self, runner: CliRunner, cli: object, mock_client: MagicMock
+    ) -> None:
+        mock_client.get_problems.return_value = [_svc(desc="MySQL", status=4)]
+        result = runner.invoke(cli, ["check-problems", "PKGVULN"])
+        assert result.exit_code == 0
+        assert "No services in error matching PKGVULN" in result.output
+        mock_client.force_service_check.assert_not_called()
+
+    def test_partial_failure_exits_1(
+        self, runner: CliRunner, cli: object, mock_client: MagicMock
+    ) -> None:
+        mock_client.get_problems.return_value = [
+            _svc(host="web01", desc="PKGVULN", status=16),
+            _svc(host="db01", desc="PKGVULN", status=16),
+        ]
+        mock_client.force_service_check.side_effect = [True, False]
+        result = runner.invoke(cli, ["check-problems"])
+        assert result.exit_code == 1
+        assert "Failed to submit force check for db01/PKGVULN" in result.output
+        assert "Submitted 1/2 force check(s)" in result.output
+
+    def test_per_service_api_error_does_not_abort_batch(
+        self, runner: CliRunner, cli: object, mock_client: MagicMock
+    ) -> None:
+        mock_client.get_problems.return_value = [
+            _svc(host="web01", desc="PKGVULN", status=16),
+            _svc(host="db01", desc="PKGVULN", status=16),
+        ]
+        mock_client.force_service_check.side_effect = [NagiosAPIError("boom"), True]
+        result = runner.invoke(cli, ["check-problems"])
+        assert result.exit_code == 1
+        assert mock_client.force_service_check.call_count == 2
+        assert "Failed to submit force check for web01/PKGVULN" in result.output
+        assert "Force check submitted for db01/PKGVULN" in result.output
+        assert "Submitted 1/2 force check(s)" in result.output
+
+    def test_get_problems_api_error_maps_to_exit_4(
+        self, runner: CliRunner, cli: object, mock_client: MagicMock
+    ) -> None:
+        mock_client.get_problems.side_effect = NagiosAPIError("boom")
+        result = runner.invoke(cli, ["check-problems"])
+        assert result.exit_code == 4
+
+
 # ---------------------------------------------------------------------- ack --
 
 

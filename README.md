@@ -81,6 +81,11 @@ nagioscli status host web01.example.com
 # Force service check
 nagioscli check web01.example.com HTTP
 
+# Force check of every service in error (warning/critical/unknown),
+# optionally filtered by service name, across all hosts
+nagioscli check-problems
+nagioscli check-problems PKGVULN
+
 # Acknowledge a problem
 nagioscli ack web01.example.com HTTP "Working on it"
 
@@ -100,6 +105,8 @@ nagioscli services web01.example.com
 | `status host <host>` | Query host status |
 | `check <host> <service>` | Force service check |
 | `check-host <host>` | Force host check |
+| `check-host-services <host>` | Force check of every service of a host |
+| `check-problems [service]` | Force check of every service in error, all hosts |
 | `ack <host> <service> <comment>` | Acknowledge service problem |
 | `ack-host <host> <comment>` | Acknowledge host problem |
 | `hosts` | List all monitored hosts |
