@@ -52,31 +52,34 @@ echo "╚═╝  ╚═══╝╚═╝  ╚═╝ ╚═════╝ ╚�
 echo "${NC}"
 echo "${BOLD}Starting Package Publishing Process...${NC}"
 
-print_step "1/9 Cleaning Previous Build"
+print_step "1/10 Cleaning Previous Build"
 run_command "pdm run clean" "Clean"
 
-print_step "2/9 Installing Dependencies"
+print_step "2/10 Syncing Lockfile"
+run_command "pdm lock -G :all" "Lockfile sync"
+
+print_step "3/10 Installing Dependencies"
 run_command "pdm run install" "Dependencies installation"
 
-print_step "3/9 Installing Development Dependencies"
+print_step "4/10 Installing Development Dependencies"
 run_command "pdm run install-dev" "Development dependencies installation"
 
-print_step "4/9 Code Linting"
+print_step "5/10 Code Linting"
 run_command "pdm run lint" "Linting"
 
-print_step "5/9 Type Checking"
+print_step "6/10 Type Checking"
 run_command "pdm run typecheck" "Type checking"
 
-print_step "6/9 Running Tests"
+print_step "7/10 Running Tests"
 run_command "pdm run test-quick" "Tests"
 
-print_step "7/9 Bumping Version"
+print_step "8/10 Bumping Version"
 run_command "pdm run version-patch" "Version bump"
 
-print_step "8/9 Building Package"
+print_step "9/10 Building Package"
 run_command "pdm build" "Package build"
 
-print_step "9/9 Publishing Package"
+print_step "10/10 Publishing Package"
 run_command "pdm publish" "Package publishing"
 
 echo ""

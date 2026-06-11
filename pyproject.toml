@@ -28,6 +28,7 @@ classifiers = [
 keywords = ["nagios", "monitoring", "cli", "api", "devops"]
 dependencies = [
     "click>=8.0,<9.0",
+    "certifi>=2024.0",
 ]
 
 [tool.pdm.dev-dependencies]
@@ -40,6 +41,10 @@ dev = [
     "pdm>=2.0.0",
     "pdm-bump",
     "interrogate>=1.7.0",
+]
+publish = [
+    "twine>=6.2.0",
+    "keyring>=25.7.0",
 ]
 
 [project.urls]
@@ -87,7 +92,7 @@ format = "ruff format"
 typecheck = "mypy nagioscli/"
 build = "python -m build"
 install = "pdm install"
-install-dev = "pdm install -G dev"
+install-dev = "pdm install -G dev -G publish"
 clihelp = "nagioscli --help"
 cliproblems = "nagioscli problems"
 cli = {composite = ["clihelp", "cliproblems"]}
