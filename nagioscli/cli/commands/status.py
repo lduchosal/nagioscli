@@ -14,16 +14,35 @@ from ..handlers import OutputFormatter, handle_error
 
 
 def _emit_service_json(svc: Service) -> None:
-    output = {
+    output: dict[str, Any] = {
         "host": svc.host_name,
         "service": svc.description,
         "status": svc.status,
         "status_text": svc.status_text,
         "output": svc.plugin_output,
+        "long_plugin_output": svc.long_plugin_output,
+        "perf_data": svc.perf_data,
+        "current_attempt": svc.current_attempt,
+        "max_attempts": svc.max_attempts,
+        "state_type": svc.state_type,
         "checks_enabled": svc.checks_enabled,
         "notifications_enabled": svc.notifications_enabled,
         "acknowledged": svc.problem_acknowledged,
+        "acknowledgement_type": svc.acknowledgement_type,
         "downtime": svc.scheduled_downtime,
+        "scheduled_downtime_depth": svc.scheduled_downtime_depth,
+        "last_check": svc.last_check,
+        "next_check": svc.next_check,
+        "last_state_change": svc.last_state_change,
+        "last_hard_state_change": svc.last_hard_state_change,
+        "last_time_ok": svc.last_time_ok,
+        "last_time_warning": svc.last_time_warning,
+        "last_time_critical": svc.last_time_critical,
+        "last_time_unknown": svc.last_time_unknown,
+        "last_notification": svc.last_notification,
+        "current_notification_number": svc.current_notification_number,
+        "execution_time": svc.execution_time,
+        "latency": svc.latency,
     }
     click.echo(json.dumps(output, indent=2))
 
@@ -31,8 +50,14 @@ def _emit_service_json(svc: Service) -> None:
 def _emit_service_text(svc: Service) -> None:
     click.echo(f"Host: {svc.host_name}")
     click.echo(f"Service: {svc.description}")
-    click.echo(f"Status: {svc.status_text}")
+    state = "hard" if svc.state_type == 1 else "soft"
+    if svc.max_attempts:
+        click.echo(f"Status: {svc.status_text} ({state} attempt {svc.current_attempt}/{svc.max_attempts})")
+    else:
+        click.echo(f"Status: {svc.status_text}")
     click.echo(f"Output: {svc.plugin_output}")
+    if svc.long_plugin_output:
+        click.echo(svc.long_plugin_output.rstrip("\n"))
     if svc.problem_acknowledged:
         click.echo("Acknowledged: Yes")
     if svc.scheduled_downtime:

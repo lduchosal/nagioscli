@@ -111,6 +111,53 @@ class TestGetServiceStatus:
         assert svc.problem_acknowledged is True
         assert svc.scheduled_downtime is True
 
+    def test_parses_full_service_payload(self) -> None:
+        client, opener = _client()
+        opener.open.return_value = _json_response({
+            "result": {"type_code": 0},
+            "data": {"service": {
+                "host_name": "mail2",
+                "description": "DISK",
+                "status": 4,
+                "plugin_output": "DF CRITICAL - zroot/backup is 95.35 (outside range 0:95)",
+                "long_plugin_output": "critical: zroot/backup is 95.35 (outside range 0:95)\n",
+                "perf_data": "'zroot/backup'=95.35;93;95;0",
+                "current_attempt": 6,
+                "max_attempts": 6,
+                "state_type": 1,
+                "acknowledgement_type": 2,
+                "last_check": 1781010038000,
+                "next_check": 1781010638000,
+                "last_state_change": 1780990232000,
+                "last_hard_state_change": 1780990232000,
+                "last_time_ok": 1780558512000,
+                "last_time_warning": 1780990232000,
+                "last_time_critical": 1781010038000,
+                "last_time_unknown": 0,
+                "last_notification": 0,
+                "current_notification_number": 21,
+                "execution_time": 2.06,
+                "latency": 0.02,
+                "scheduled_downtime_depth": 0,
+            }},
+        })
+        svc = client.get_service_status("mail2", "DISK")
+        assert svc.long_plugin_output.startswith("critical:")
+        assert "zroot/backup" in svc.perf_data
+        assert svc.current_attempt == 6 and svc.max_attempts == 6
+        assert svc.state_type == 1
+        assert svc.acknowledgement_type == 2
+        assert svc.last_check == 1781010038000
+        assert svc.next_check == 1781010638000
+        assert svc.last_state_change == 1780990232000
+        assert svc.last_hard_state_change == 1780990232000
+        assert svc.last_time_critical == 1781010038000
+        assert svc.current_notification_number == 21
+        assert svc.execution_time == 2.06
+        assert svc.latency == 0.02
+        assert svc.scheduled_downtime_depth == 0
+        assert svc.scheduled_downtime is False
+
     def test_not_found_when_service_missing(self) -> None:
         client, opener = _client()
         opener.open.return_value = _json_response({

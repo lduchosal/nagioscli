@@ -543,18 +543,35 @@ class NagiosClient:
 
     def _parse_service(self, data: dict[str, Any]) -> Service:
         """Parse service data from API response."""
+        depth = data.get("scheduled_downtime_depth", 0)
         return Service(
             host_name=data.get("host_name", ""),
             description=data.get("description", ""),
             status=data.get("status", 16),
             plugin_output=data.get("plugin_output", ""),
+            long_plugin_output=data.get("long_plugin_output", ""),
+            perf_data=data.get("perf_data", ""),
             current_attempt=data.get("current_attempt", 0),
             max_attempts=data.get("max_attempts", 0),
+            state_type=data.get("state_type", 0),
             checks_enabled=data.get("checks_enabled", True),
             notifications_enabled=data.get("notifications_enabled", True),
             problem_acknowledged=data.get("problem_has_been_acknowledged", False),
-            scheduled_downtime=data.get("scheduled_downtime_depth", 0) > 0,
-            perf_data=data.get("perf_data", ""),
+            acknowledgement_type=data.get("acknowledgement_type", 0),
+            scheduled_downtime=depth > 0,
+            scheduled_downtime_depth=depth,
+            last_check=data.get("last_check", 0),
+            next_check=data.get("next_check", 0),
+            last_state_change=data.get("last_state_change", 0),
+            last_hard_state_change=data.get("last_hard_state_change", 0),
+            last_time_ok=data.get("last_time_ok", 0),
+            last_time_warning=data.get("last_time_warning", 0),
+            last_time_critical=data.get("last_time_critical", 0),
+            last_time_unknown=data.get("last_time_unknown", 0),
+            last_notification=data.get("last_notification", 0),
+            current_notification_number=data.get("current_notification_number", 0),
+            execution_time=data.get("execution_time", 0.0),
+            latency=data.get("latency", 0.0),
         )
 
     def _parse_host(self, data: dict[str, Any]) -> Host:

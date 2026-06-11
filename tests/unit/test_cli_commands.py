@@ -118,6 +118,68 @@ class TestStatus:
         payload = json.loads(result.output)
         assert payload["status_text"] == "WARNING"
 
+    def test_service_json_exposes_detail_fields(
+        self, runner: CliRunner, cli: object, mock_client: MagicMock
+    ) -> None:
+        mock_client.get_service_status.return_value = _svc(
+            status=4,
+            long_plugin_output="critical: zroot/backup is 95.35\n",
+            perf_data="'zroot/backup'=95.35;93;95;0",
+            current_attempt=6,
+            max_attempts=6,
+            state_type=1,
+            acknowledgement_type=2,
+            last_check=1781010038000,
+            next_check=1781010638000,
+            last_state_change=1780990232000,
+            last_hard_state_change=1780990232000,
+            last_time_ok=1780558512000,
+            last_time_warning=1780990232000,
+            last_time_critical=1781010038000,
+            current_notification_number=21,
+            execution_time=2.06,
+            latency=0.02,
+        )
+        result = runner.invoke(cli, ["status", "service", "web01", "HTTP", "--json"])
+        assert result.exit_code == 0
+        payload = json.loads(result.output)
+        # DoD minimum fields
+        for key in (
+            "long_plugin_output",
+            "perf_data",
+            "current_attempt",
+            "max_attempts",
+            "state_type",
+            "last_check",
+            "last_state_change",
+            "execution_time",
+            "latency",
+        ):
+            assert key in payload, f"missing key in --json output: {key}"
+        assert payload["perf_data"].startswith("'zroot/backup'")
+        assert payload["current_attempt"] == 6
+        assert payload["state_type"] == 1
+        # Backward-compat keys preserved
+        assert payload["output"] == "OK"
+        assert payload["status_text"] == "WARNING"
+        assert "acknowledged" in payload
+        assert "downtime" in payload
+
+    def test_service_text_shows_attempt_and_long_output(
+        self, runner: CliRunner, cli: object, mock_client: MagicMock
+    ) -> None:
+        mock_client.get_service_status.return_value = _svc(
+            status=4,
+            current_attempt=3,
+            max_attempts=6,
+            state_type=0,
+            long_plugin_output="critical: zroot/backup is 95.35",
+        )
+        result = runner.invoke(cli, ["status", "service", "web01", "HTTP"])
+        assert result.exit_code == 0
+        assert "soft attempt 3/6" in result.output
+        assert "critical: zroot/backup" in result.output
+
     def test_service_quiet(
         self, runner: CliRunner, cli: object, mock_client: MagicMock
     ) -> None:
