@@ -1,0 +1,67 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>#627 — QUALITY / Wire codecov, SonarCloud and interrogate badges — kenboard wiki</title><style>body{margin:0;font-family:system-ui,sans-serif;color:#222;background:#fff}
+.layout{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+nav.sidebar{background:#f6f8fa;border-right:1px solid #d0d7de;padding:16px;
+  overflow-y:auto;font-size:13px}
+nav.sidebar h1{font-size:14px;text-transform:uppercase;color:#57606a;margin:0 0 12px}
+nav.sidebar ul{list-style:none;padding:0;margin:0}
+nav.sidebar li{margin:2px 0}
+nav.sidebar a{color:#0969da;text-decoration:none}
+nav.sidebar a:hover{text-decoration:underline}
+nav.sidebar a.current{font-weight:600;color:#1a1a1a}
+main{padding:24px 32px;max-width:900px}
+main h1{margin-top:0}
+main code{background:#f6f8fa;padding:1px 4px;border-radius:3px;font-size:90%}
+main pre{background:#f6f8fa;padding:12px;border-radius:6px;overflow-x:auto}
+main pre code{background:transparent;padding:0}
+main a{color:#0969da}
+/* Task detail (#376f — mirrors templates/modals/task_fullscreen.html) */
+.fullscreen-card{background:#fff;border:1px solid #d0d7de;border-radius:10px;
+  padding:32px 36px;max-width:760px}
+.fullscreen-header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.fullscreen-id{font-size:12px;color:#57606a;font-weight:600}
+.fullscreen-status{font-size:11px;text-transform:uppercase;letter-spacing:.5px;
+  color:#57606a;background:#f6f8fa;padding:3px 8px;border-radius:10px}
+.fullscreen-status.status-todo{background:#ddf4ff;color:#0969da}
+.fullscreen-status.status-doing{background:#fff8c5;color:#9a6700}
+.fullscreen-status.status-review{background:#dafbe1;color:#1a7f37}
+.fullscreen-status.status-done{background:#eaeef2;color:#57606a}
+.fullscreen-title{font-size:22px;font-weight:700;margin:0 0 16px;line-height:1.3}
+.fullscreen-meta{display:flex;align-items:center;gap:10px;margin-bottom:20px;
+  font-size:13px;color:#57606a}
+.task-avatar{width:28px;height:28px;border-radius:50%;display:flex;
+  align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px}
+.fs-who{font-weight:600;color:#222}
+.fullscreen-desc{font-size:14px;line-height:1.7;border-top:1px solid #d0d7de;
+  padding-top:16px}
+.fullscreen-desc h1,.fullscreen-desc h2,.fullscreen-desc h3{margin-top:16px;
+  margin-bottom:8px}
+.fullscreen-desc pre{background:#f6f8fa;border-radius:4px;padding:12px;
+  overflow-x:auto;font-size:12px}
+.fullscreen-desc code{background:#f6f8fa;border-radius:3px;padding:1px 4px;font-size:12px}
+.fullscreen-desc pre code{background:transparent;padding:0}
+.fullscreen-desc ul,.fullscreen-desc ol{padding-left:20px}
+.wiki-nav{margin-top:20px;padding-top:12px;border-top:1px solid #d0d7de;
+  font-size:13px;color:#57606a}
+.wiki-nav a{color:#0969da}
+</style></head><body><div class="layout"><nav class="sidebar"><h1>kenboard wiki</h1><ul><li><a href="index.html">Home</a></li><li style="padding-left:0px"><a href="../cli/index.html">CLI layer</a></li><li style="padding-left:12px"><a href="../cli/commands/index.html">CLI commands</a></li><li style="padding-left:0px"><a href="../core/index.html">Core</a></li><li style="padding-left:12px"><a href="../core/models/index.html">Core / models</a></li><li style="padding-left:12px"><a href="../core/client/index.html">Core / client</a></li><li style="padding-left:0px"><a href="../services/index.html">Services</a></li><li style="padding-left:0px"><a href="../tests/index.html">Tests</a></li><li style="padding-left:0px"><a href="../packaging/index.html" class="current">Packaging & tooling</a></li><li style="padding-left:0px"><a href="../docs/index.html">Documentation</a></li></ul></nav><main><div class="fullscreen-card"><div class="fullscreen-header"><span class="fullscreen-id">#627</span><span class="fullscreen-status status-done">done</span></div><h2 class="fullscreen-title">QUALITY / Wire codecov, SonarCloud and interrogate badges</h2><div class="fullscreen-meta"><div class="task-avatar" style="background:#0a3069">C</div><span class="fs-who">Claude</span><span>Classified 2026-07-28</span><span>by key:c6597e8c-4d84-44f1-821e-8f9ad6720cf6</span></div><div class="fullscreen-desc"><p>Aligner les checks de qualité/sécurité du repo nagioscli sur ceux de kenboard.</p>
+<h2>Changements</h2>
+<ul>
+<li>README : remplacé les 2 badges existants par le set complet kenboard (15 badges) — PyPI, build/publish, codecov, interrogate, 8 metrics SonarCloud.</li>
+<li><code>pyproject.toml</code> : ajout de <code>interrogate&gt;=1.7.0</code> en dev-dep, config <code>[tool.interrogate]</code> (<code>fail-under=0</code>, <code>generate-badge=.</code>), nouveau script <code>test-cov-xml</code>.</li>
+<li><code>interrogate_badge.svg</code> généré et committé (100% docstring coverage).</li>
+<li><code>.github/workflows/python-package.yml</code> :</li>
+<li>test step produit maintenant <code>coverage.xml</code></li>
+<li>upload codecov via <code>codecov/codecov-action@v5</code> (uniquement sur 3.13)</li>
+<li>upload artefact <code>coverage-xml</code> pour le job Sonar</li>
+<li>nouveau job <code>sonarcloud</code> (<code>SonarSource/sonarqube-scan-action@v6</code>) qui dépend de <code>build</code></li>
+<li><code>sonar-project.properties</code> créé (<code>projectKey=lduchosal_nagioscli</code>, <code>organization=lduchosal</code>).</li>
+<li><code>.gitignore</code> : ajout de <code>coverage.xml</code>.</li>
+</ul>
+<h2>Setup externe effectué</h2>
+<ul>
+<li>Repo activé sur codecov.io, <code>CODECOV_TOKEN</code> ajouté aux secrets GitHub.</li>
+<li>Projet créé sur sonarcloud.io (<code>lduchosal_nagioscli</code>), <code>SONAR_TOKEN</code> ajouté aux secrets, <strong>Automatic Analysis désactivée</strong> (sinon conflit avec le scan CI).</li>
+</ul>
+<h2>Résultat</h2>
+<p>CI verte sur tous les jobs (4× build, codecov upload, SonarCloud scan).
+Commits : <code>bf0fdcd</code> (README badges), <code>95b7ccc</code> (CI wiring).</p></div><div class="wiki-nav"><a href="index.html">← retour à packaging</a> · <a href="../log.html">voir log</a></div></div></main></div></body></html>

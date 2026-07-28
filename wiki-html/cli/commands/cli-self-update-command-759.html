@@ -1,0 +1,143 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>#759 — CLI / self-update command — kenboard wiki</title><style>body{margin:0;font-family:system-ui,sans-serif;color:#222;background:#fff}
+.layout{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+nav.sidebar{background:#f6f8fa;border-right:1px solid #d0d7de;padding:16px;
+  overflow-y:auto;font-size:13px}
+nav.sidebar h1{font-size:14px;text-transform:uppercase;color:#57606a;margin:0 0 12px}
+nav.sidebar ul{list-style:none;padding:0;margin:0}
+nav.sidebar li{margin:2px 0}
+nav.sidebar a{color:#0969da;text-decoration:none}
+nav.sidebar a:hover{text-decoration:underline}
+nav.sidebar a.current{font-weight:600;color:#1a1a1a}
+main{padding:24px 32px;max-width:900px}
+main h1{margin-top:0}
+main code{background:#f6f8fa;padding:1px 4px;border-radius:3px;font-size:90%}
+main pre{background:#f6f8fa;padding:12px;border-radius:6px;overflow-x:auto}
+main pre code{background:transparent;padding:0}
+main a{color:#0969da}
+/* Task detail (#376f — mirrors templates/modals/task_fullscreen.html) */
+.fullscreen-card{background:#fff;border:1px solid #d0d7de;border-radius:10px;
+  padding:32px 36px;max-width:760px}
+.fullscreen-header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.fullscreen-id{font-size:12px;color:#57606a;font-weight:600}
+.fullscreen-status{font-size:11px;text-transform:uppercase;letter-spacing:.5px;
+  color:#57606a;background:#f6f8fa;padding:3px 8px;border-radius:10px}
+.fullscreen-status.status-todo{background:#ddf4ff;color:#0969da}
+.fullscreen-status.status-doing{background:#fff8c5;color:#9a6700}
+.fullscreen-status.status-review{background:#dafbe1;color:#1a7f37}
+.fullscreen-status.status-done{background:#eaeef2;color:#57606a}
+.fullscreen-title{font-size:22px;font-weight:700;margin:0 0 16px;line-height:1.3}
+.fullscreen-meta{display:flex;align-items:center;gap:10px;margin-bottom:20px;
+  font-size:13px;color:#57606a}
+.task-avatar{width:28px;height:28px;border-radius:50%;display:flex;
+  align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px}
+.fs-who{font-weight:600;color:#222}
+.fullscreen-desc{font-size:14px;line-height:1.7;border-top:1px solid #d0d7de;
+  padding-top:16px}
+.fullscreen-desc h1,.fullscreen-desc h2,.fullscreen-desc h3{margin-top:16px;
+  margin-bottom:8px}
+.fullscreen-desc pre{background:#f6f8fa;border-radius:4px;padding:12px;
+  overflow-x:auto;font-size:12px}
+.fullscreen-desc code{background:#f6f8fa;border-radius:3px;padding:1px 4px;font-size:12px}
+.fullscreen-desc pre code{background:transparent;padding:0}
+.fullscreen-desc ul,.fullscreen-desc ol{padding-left:20px}
+.wiki-nav{margin-top:20px;padding-top:12px;border-top:1px solid #d0d7de;
+  font-size:13px;color:#57606a}
+.wiki-nav a{color:#0969da}
+</style></head><body><div class="layout"><nav class="sidebar"><h1>kenboard wiki</h1><ul><li><a href="../index.html">Home</a></li><li style="padding-left:0px"><a href="../../cli/index.html">CLI layer</a></li><li style="padding-left:12px"><a href="../../cli/commands/index.html" class="current">CLI commands</a></li><li style="padding-left:0px"><a href="../../core/index.html">Core</a></li><li style="padding-left:12px"><a href="../../core/models/index.html">Core / models</a></li><li style="padding-left:12px"><a href="../../core/client/index.html">Core / client</a></li><li style="padding-left:0px"><a href="../../services/index.html">Services</a></li><li style="padding-left:0px"><a href="../../tests/index.html">Tests</a></li><li style="padding-left:0px"><a href="../../packaging/index.html">Packaging & tooling</a></li><li style="padding-left:0px"><a href="../../docs/index.html">Documentation</a></li></ul></nav><main><div class="fullscreen-card"><div class="fullscreen-header"><span class="fullscreen-id">#759</span><span class="fullscreen-status status-done">done</span></div><h2 class="fullscreen-title">CLI / self-update command</h2><div class="fullscreen-meta"><div class="task-avatar" style="background:#0a3069">C</div><span class="fs-who">Claude</span><span>Classified 2026-06-07</span><span>by key:c6597e8c-4d84-44f1-821e-8f9ad6720cf6</span></div><div class="fullscreen-desc"><h2>Contexte</h2>
+<p>Ajouter une commande <code>nagioscli self-update</code> calquée sur les implémentations
+existantes de :</p>
+<ul>
+<li><code>../kenboard</code> → <code>ken self-update</code> (livré dans le paquet)</li>
+<li><code>../semacli</code> → <code>sem self-update</code> (référence directe :
+  <code>semacli/cli/commands/self_update.py</code>)</li>
+</ul>
+<p>L'objectif est d'aligner l'UX : comparer la version installée à la dernière
+release sur PyPI (paquet <code>nachos</code> — pas <code>nagioscli</code>, voir le quirk PyPI dans
+<code>CLAUDE.md</code>) et lancer un <code>pip install --upgrade</code> ciblant l'interpréteur
+courant (<code>sys.executable</code>).</p>
+<h2>Spec attendue</h2>
+<ul>
+<li>Fichier : <code>nagioscli/cli/commands/self_update.py</code>.</li>
+<li>Endpoint PyPI : <code>https://pypi.org/pypi/nachos/json</code>.</li>
+<li>Flags : <code>--check</code>, <code>--pre</code>, <code>--dry-run</code> (mêmes sémantiques que semacli).</li>
+<li>Codes de sortie :</li>
+<li><code>0</code> à jour ou upgrade OK</li>
+<li><code>1</code> upgrade dispo (en <code>--check</code>) ou échec pip</li>
+<li><code>2</code> PyPI injoignable</li>
+<li>Utilise <code>sys.executable -m pip install --upgrade nachos</code> (et non <code>pip</code>
+  global).</li>
+<li>Helpers <code>_fetch_latest_version</code>, <code>_is_stable</code>, <code>_version_key</code>,
+  <code>_pip_command</code> à reprendre tels quels (en remplaçant le nom du paquet).</li>
+<li>Enregistrement via <code>register_self_update_commands(main_group)</code> appelé
+  depuis <code>nagioscli/cli/commands/__init__.py</code>.</li>
+</ul>
+<h2>Dépendances</h2>
+<p><code>requests</code> n'est PAS dans les deps runtime (<code>core/client.py</code> utilise
+<code>urllib</code> exprès — voir <code>CLAUDE.md</code> § "Things not to do"). Réutiliser
+<code>urllib.request</code> pour l'appel PyPI plutôt que d'ajouter <code>requests</code>.</p>
+<h2>Tests</h2>
+<p>Tests unitaires dans <code>tests/unit/test_self_update.py</code> reprenant la
+structure de <code>../semacli/tests/unit/test_self_update.py</code> :
+- mock de l'appel HTTP (already-up-to-date, upgrade-available, network-fail)
+- <code>--check</code> retourne 1 quand upgrade dispo
+- <code>--dry-run</code> n'exécute pas <code>subprocess.run</code></p>
+<h2>Garde-fous</h2>
+<ul>
+<li><code>pdm run check</code> doit passer (lint + format + typecheck + tests).</li>
+<li>mypy strict : annoter complètement (<code>disallow_untyped_defs</code>).</li>
+<li>Couverture ≥ 80 % maintenue.</li>
+</ul>
+<hr />
+<h2>Résolution</h2>
+<h3>Modifications</h3>
+<ul>
+<li><code>nagioscli/cli/commands/self_update.py</code> (nouveau) : commande Click
+  <code>self-update</code> avec les flags <code>--check</code>, <code>--pre</code>, <code>--dry-run</code>. Helpers
+  <code>_fetch_latest_version</code>, <code>_is_stable</code>, <code>_version_key</code>, <code>_pip_command</code>
+  calqués sur semacli. Appel PyPI via <code>urllib.request.urlopen</code> (pas
+  <code>requests</code>, conformément à <code>CLAUDE.md</code>). Contexte SSL construit avec
+  <code>ssl.create_default_context(cafile=certifi.where())</code> pour éviter
+  <code>CERTIFICATE_VERIFY_FAILED</code> sur macOS Python (où le truststore système
+  n'est pas câblé par défaut).</li>
+<li><code>nagioscli/cli/commands/__init__.py</code> : import +
+  <code>register_self_update_commands(main_group)</code>.</li>
+<li><code>tests/unit/test_self_update.py</code> (nouveau) : 18 tests miroirs de
+  <code>../semacli/tests/unit/test_self_update.py</code>, avec mock de <code>urlopen</code>
+  via un faux context manager <code>BytesIO</code> (au lieu du mock <code>requests.get</code>).</li>
+<li><code>pyproject.toml</code> :</li>
+<li><code>dependencies</code> : ajout de <code>certifi&gt;=2024.0</code> (utilisé pour le bundle
+    CA dans l'appel PyPI).</li>
+<li><code>[tool.pdm.dev-dependencies]</code> : ajout du groupe <code>publish</code>
+    (<code>twine&gt;=6.2.0</code>, <code>keyring&gt;=25.7.0</code>) pour que <code>pdm publish</code> puisse
+    lire les credentials du Keychain macOS sans prompter.</li>
+<li>script <code>install-dev</code> : <code>pdm install -G dev -G publish</code>.</li>
+<li><code>publish.sh</code> : nouvelle étape 2/10 « Syncing Lockfile » qui exécute
+  <code>pdm lock -G :all</code> avant l'installation, pour que toute évolution des
+  groupes dans <code>pyproject.toml</code> soit prise en compte automatiquement
+  (publish.sh autonome, sans intervention manuelle sur le lockfile).</li>
+<li><code>pdm.lock</code> : régénéré pour inclure les groupes <code>default</code>, <code>dev</code>,
+  <code>publish</code>.</li>
+</ul>
+<h3>Comportements obtenus</h3>
+<ul>
+<li><code>nagioscli self-update</code> (à jour) : sortie 0, message "Already up to date".</li>
+<li><code>nagioscli self-update --check</code> : exit 1 si upgrade dispo, 0 sinon.</li>
+<li><code>nagioscli self-update --dry-run</code> : imprime
+  <code>&lt;python&gt; -m pip install --upgrade nachos</code>, n'exécute pas pip.</li>
+<li><code>nagioscli self-update --pre</code> : ajoute <code>--pre</code> à la commande pip,
+  considère les pré-releases dans la résolution PyPI.</li>
+<li>Smoke test réel contre PyPI : OK (<code>Latest on PyPI: 0.1.20 — Already
+  up to date.</code>).</li>
+<li><code>pdm publish</code> peut désormais lire le token PyPI depuis le Keychain
+  (via <code>keyring</code>), sans demander de credential interactivement.</li>
+</ul>
+<h3>Garde-fous</h3>
+<ul>
+<li><code>pdm run lint</code> : All checks passed.</li>
+<li><code>pdm run typecheck</code> : Success, no issues found in 21 source files.</li>
+<li><code>pdm run test-quick</code> : 150 tests OK (18 nouveaux).</li>
+<li><code>pdm run test-cov-xml</code> : couverture 92.50 % (gate à 80 %).</li>
+<li>Pas de <code>requests</code>/<code>httpx</code> ajouté en runtime ; uniquement <code>certifi</code>,
+  dépendance pure data (bundle CA), conforme à l'esprit de la consigne
+  "stdlib urllib on purpose".</li>
+</ul></div><div class="wiki-nav"><a href="index.html">← retour à cli/commands</a> · <a href="../../log.html">voir log</a></div></div></main></div></body></html>

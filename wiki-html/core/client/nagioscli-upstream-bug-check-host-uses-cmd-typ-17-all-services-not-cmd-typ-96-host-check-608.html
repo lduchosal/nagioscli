@@ -1,0 +1,157 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>#608 — NAGIOSCLI / Upstream bug — check-host uses cmd_typ=17 (= all services), not cmd_typ=96 (= host check) — kenboard wiki</title><style>body{margin:0;font-family:system-ui,sans-serif;color:#222;background:#fff}
+.layout{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+nav.sidebar{background:#f6f8fa;border-right:1px solid #d0d7de;padding:16px;
+  overflow-y:auto;font-size:13px}
+nav.sidebar h1{font-size:14px;text-transform:uppercase;color:#57606a;margin:0 0 12px}
+nav.sidebar ul{list-style:none;padding:0;margin:0}
+nav.sidebar li{margin:2px 0}
+nav.sidebar a{color:#0969da;text-decoration:none}
+nav.sidebar a:hover{text-decoration:underline}
+nav.sidebar a.current{font-weight:600;color:#1a1a1a}
+main{padding:24px 32px;max-width:900px}
+main h1{margin-top:0}
+main code{background:#f6f8fa;padding:1px 4px;border-radius:3px;font-size:90%}
+main pre{background:#f6f8fa;padding:12px;border-radius:6px;overflow-x:auto}
+main pre code{background:transparent;padding:0}
+main a{color:#0969da}
+/* Task detail (#376f — mirrors templates/modals/task_fullscreen.html) */
+.fullscreen-card{background:#fff;border:1px solid #d0d7de;border-radius:10px;
+  padding:32px 36px;max-width:760px}
+.fullscreen-header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.fullscreen-id{font-size:12px;color:#57606a;font-weight:600}
+.fullscreen-status{font-size:11px;text-transform:uppercase;letter-spacing:.5px;
+  color:#57606a;background:#f6f8fa;padding:3px 8px;border-radius:10px}
+.fullscreen-status.status-todo{background:#ddf4ff;color:#0969da}
+.fullscreen-status.status-doing{background:#fff8c5;color:#9a6700}
+.fullscreen-status.status-review{background:#dafbe1;color:#1a7f37}
+.fullscreen-status.status-done{background:#eaeef2;color:#57606a}
+.fullscreen-title{font-size:22px;font-weight:700;margin:0 0 16px;line-height:1.3}
+.fullscreen-meta{display:flex;align-items:center;gap:10px;margin-bottom:20px;
+  font-size:13px;color:#57606a}
+.task-avatar{width:28px;height:28px;border-radius:50%;display:flex;
+  align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px}
+.fs-who{font-weight:600;color:#222}
+.fullscreen-desc{font-size:14px;line-height:1.7;border-top:1px solid #d0d7de;
+  padding-top:16px}
+.fullscreen-desc h1,.fullscreen-desc h2,.fullscreen-desc h3{margin-top:16px;
+  margin-bottom:8px}
+.fullscreen-desc pre{background:#f6f8fa;border-radius:4px;padding:12px;
+  overflow-x:auto;font-size:12px}
+.fullscreen-desc code{background:#f6f8fa;border-radius:3px;padding:1px 4px;font-size:12px}
+.fullscreen-desc pre code{background:transparent;padding:0}
+.fullscreen-desc ul,.fullscreen-desc ol{padding-left:20px}
+.wiki-nav{margin-top:20px;padding-top:12px;border-top:1px solid #d0d7de;
+  font-size:13px;color:#57606a}
+.wiki-nav a{color:#0969da}
+</style></head><body><div class="layout"><nav class="sidebar"><h1>kenboard wiki</h1><ul><li><a href="../index.html">Home</a></li><li style="padding-left:0px"><a href="../../cli/index.html">CLI layer</a></li><li style="padding-left:12px"><a href="../../cli/commands/index.html">CLI commands</a></li><li style="padding-left:0px"><a href="../../core/index.html">Core</a></li><li style="padding-left:12px"><a href="../../core/models/index.html">Core / models</a></li><li style="padding-left:12px"><a href="../../core/client/index.html" class="current">Core / client</a></li><li style="padding-left:0px"><a href="../../services/index.html">Services</a></li><li style="padding-left:0px"><a href="../../tests/index.html">Tests</a></li><li style="padding-left:0px"><a href="../../packaging/index.html">Packaging & tooling</a></li><li style="padding-left:0px"><a href="../../docs/index.html">Documentation</a></li></ul></nav><main><div class="fullscreen-card"><div class="fullscreen-header"><span class="fullscreen-id">#608</span><span class="fullscreen-status status-done">done</span></div><h2 class="fullscreen-title">NAGIOSCLI / Upstream bug — check-host uses cmd_typ=17 (= all services), not cmd_typ=96 (= host check)</h2><div class="fullscreen-meta"><div class="task-avatar" style="background:#0a3069">C</div><span class="fs-who">Claude</span><span>Classified 2026-05-31</span><span>by key:c6597e8c-4d84-44f1-821e-8f9ad6720cf6</span></div><div class="fullscreen-desc"><p>Bug report à transmettre upstream (https://github.com/lduchosal/nagioscli/issues).</p>
+<hr />
+<h2>Title</h2>
+<p>check-host uses cmd_typ=17 (SCHEDULE_FORCED_HOST_SVC_CHECKS), should be cmd_typ=96 (SCHEDULE_FORCED_HOST_CHECK)</p>
+<h2>Summary</h2>
+<p>nagioscli check-host POSTs cmd_typ=17 with comment 'SCHEDULE_FORCED_HOST_CHECK', but on Nagios Core cmd_typ=17 is 'Schedule a check of all services for a host' (SCHEDULE_HOST_SVC_CHECKS family). The real 'Schedule a forced host check' (SCHEDULE_FORCED_HOST_CHECK) is cmd_typ=96. Result: nagioscli check-host re-schedules every service of the host instead of running the host's own check_command (typically the PING/check-host-alive). The host's last_check is never updated by this call.</p>
+<h2>Reproduction</h2>
+<p>On any Nagios Core 4.x:</p>
+<pre><code>nagioscli check-host SOMEHOST -vvv
+# DEBUG: POST .../cmd.cgi
+# DEBUG: Data: {'cmd_typ': '17', ...}
+# Force check submitted for host SOMEHOST     &lt;-- claim
+</code></pre>
+<p>Then poll statusjson.cgi for that host:
+    last_check unchanged</p>
+<p>But every service of that host has its last_check advanced. So the command did run — it just isn't a host check.</p>
+<h2>Authoritative source (form descriptions from Nagios CGI itself)</h2>
+<p>GET https://nagios/cgi-bin/cmd.cgi?cmd_typ=N&amp;host=X (HTML form text):</p>
+<table>
+<thead>
+<tr>
+<th>cmd_typ</th>
+<th>Form description on Nagios Core 4.x</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>7</td>
+<td>'Schedule a service check' (with force_check checkbox)</td>
+</tr>
+<tr>
+<td>17</td>
+<td>'Schedule a check of all services for a host'</td>
+</tr>
+<tr>
+<td>33</td>
+<td>'Acknowledge a host problem'</td>
+</tr>
+<tr>
+<td>34</td>
+<td>'Acknowledge a service problem'</td>
+</tr>
+<tr>
+<td>96</td>
+<td>'Schedule a host check' (with force_check checkbox)</td>
+</tr>
+</tbody>
+</table>
+<p>Cross-checked on a live install: cmd_typ=96 + force_check=on moves the host's last_check, cmd_typ=17 + force_check=on does not.</p>
+<h2>Root cause</h2>
+<p>nagioscli/core/client.py force_host_check():</p>
+<pre><code>data = {
+    'cmd_typ': '17',  # SCHEDULE_FORCED_HOST_CHECK     &lt;-- comment is wrong, value is wrong-for-intent
+    ...
+}
+</code></pre>
+<p>The chosen cmd_typ matches SCHEDULE_HOST_SVC_CHECKS, not SCHEDULE_HOST_CHECK.</p>
+<h2>Suggested fix</h2>
+<p>Three viable options, pick one:</p>
+<ol>
+<li><strong>Fix the value</strong> (smallest patch, matches the existing command name and docstring intent):</li>
+<li>
+<p>force_host_check(): change cmd_typ from '17' to '96', update comment to 'SCHEDULE_FORCED_HOST_CHECK'.</p>
+</li>
+<li>
+<p><strong>Rename + add</strong> (best UX, operators often want both):</p>
+</li>
+<li>Keep current behavior under a new name: check-host-services / check-all-services / 'force-check all services of host' (cmd_typ=17).</li>
+<li>
+<p>Add a new check-host that uses cmd_typ=96 (the actual host check). Update docstrings and tests.</p>
+</li>
+<li>
+<p><strong>Document the discrepancy</strong> (worst, but quick): rename force_host_check to force_host_services_check and update CLI command to check-host-services. Operators wanting a real host check would have to file an enhancement.</p>
+</li>
+</ol>
+<p>Recommendation: option 2. The 'force all services of a host' command is genuinely useful (it's what 2113.ch's existing monitor1 wrapper force-check-host.sh does via the named pipe), and the 'force host check' is what users naturally expect from a command literally called check-host.</p>
+<h2>Tests</h2>
+<p>Adjust tests/unit/test_client_csrf.py and any related fixtures to assert cmd_typ for each entrypoint. If option 2, add round-trip tests for both new methods. Live regression idea: mock statusjson.cgi response to expose 'last_check' field and assert which timestamps advance after each call.</p>
+<h2>Impact</h2>
+<p>Severity: medium. Users running 'nagioscli check-host X' currently get a different (still useful) action than the name implies. No false-success — the command does succeed and the lib correctly reports it. But operators debugging a host's check itself (e.g. PING flapping) get no help from this command, and the side-effect of rescheduling every service of a busy host can be surprising.</p>
+<h2>Discovery</h2>
+<p>ken #606 — verifying the CSRF fix (f5f0d58 in 0.1.16). check (cmd_typ=7) verified working. check-host returned 'submitted' but host last_check did not advance over 30s. Inspected Nagios CGI HTML forms for cmd_typ=7/17/96 and confirmed cmd_typ=17 is 'all services of host', cmd_typ=96 is 'host check'. Compared to existing 2113.ch monitor1 wrapper force-check-host.sh which uses SCHEDULE_FORCED_HOST_SVC_CHECK (= cmd_typ=17 equivalent via named pipe) and is semantically the same as the lib's current behavior — confirming the lib's mis-name.</p>
+<hr />
+<h2>Résolution</h2>
+<p>Option 2 retenue (rename + add) conformément à la recommandation du rapport.</p>
+<h3>Modifications</h3>
+<ul>
+<li>nagioscli/core/client.py — <code>force_host_check</code> change <code>cmd_typ</code> from <code>"17"</code> to <code>"96"</code> (SCHEDULE_FORCED_HOST_CHECK) in both the POST body and the CSRF preflight params. The docstring now says "runs the host's own check_command".</li>
+<li>nagioscli/core/client.py — new <code>force_host_services_check(hostname)</code> method using <code>cmd_typ="17"</code> (SCHEDULE_FORCED_HOST_SVC_CHECKS). Preserves the previous semantics of force-checking every service of a host under an honest name.</li>
+<li>nagioscli/cli/commands/check.py — new <code>nagioscli check-host-services &lt;host&gt;</code> CLI command wrapping <code>force_host_services_check</code>. Existing <code>nagioscli check-host</code> now performs the actual host check.</li>
+<li>tests/unit/test_client_csrf.py — renamed <code>test_force_host_check_uses_cmd_typ_17</code> → <code>test_force_host_check_uses_cmd_typ_96</code> and updated assertions (preflight URL + POST body now require <code>cmd_typ=96</code> and absence of <code>service</code> field). Added <code>test_force_host_services_check_uses_cmd_typ_17</code> for the new method, asserting the GET preflight + POST + cmd_typ=17 + nagFormId round-trip.</li>
+<li>tests/fixtures/mock_nagios_client.py — added <code>force_host_services_check</code> stub for parity with the real client interface.</li>
+<li>doc/SPEC.md — added a <code>check-host-services</code> row in the Action Commands table and clarified <code>check-host</code> (cmd_typ=96).</li>
+<li><strong>Bonus, discovered during live verification</strong>: nagioscli/core/config.py — <code>configparser.ConfigParser()</code> was using default interpolation, so the <code>start_time_format</code> setting introduced in 0.1.16 raised <code>InterpolationSyntaxError: '%' must be followed by '%' or '('</code> on the first <code>%d</code> in any strftime pattern. Switched to <code>ConfigParser(interpolation=None)</code> and added regression test <code>TestLoadConfig::test_start_time_format_with_percent_loads</code>.</li>
+</ul>
+<h3>Comportements obtenus</h3>
+<ul>
+<li><code>nagioscli check-host HOST</code> now runs the actual host check (cmd_typ=96). Verified live against www.monitor.2113.ch (host <code>2113.ch</code>):</li>
+<li>Before: <code>last_check=2026-05-31 21:31:00</code>, <code>next_check=2028-07-05</code> (garbage — Nagios mis-parsed the US start_time on a euro server)</li>
+<li>After (cmd_typ=96 + <code>start_time_format=%d-%m-%Y %H:%M:%S</code> in <code>[settings]</code>): <code>last_check=2026-05-31 21:34:47</code> (matches POST time), <code>next_check=2026-05-31 21:39:47</code> (normal 5-min interval).</li>
+<li><code>nagioscli check-host-services HOST</code> exposes the previous behavior under its honest name.</li>
+<li>The <code>start_time_format</code> setting from 0.1.16 is actually usable now — strftime patterns with <code>%</code> no longer crash <code>load_config</code>.</li>
+</ul>
+<h3>Garde-fous</h3>
+<ul>
+<li>pytest: 45 passed (was 43) — 1 new test for <code>force_host_services_check</code>, 1 new regression test for ConfigParser interpolation, 1 existing test renamed/retargeted from cmd_typ=17 to cmd_typ=96.</li>
+<li>ruff check (nagioscli + tests): clean.</li>
+<li>mypy (nagioscli): clean.</li>
+<li>Live verification on www.monitor.2113.ch: <code>last_check</code> timestamp on host <code>2113.ch</code> advances by the expected amount after <code>nagioscli check-host</code>. The <code>check-host-services</code> mutating command was not exercised live to limit side effects; covered by mock test only.</li>
+</ul>
+<h3>Note d'incompatibilité</h3>
+<p><code>force_host_check</code> and <code>nagioscli check-host</code> now do something different from 0.1.16 (host's own check instead of all-services check). Operators wanting the old behavior switch to <code>check-host-services</code> / <code>force_host_services_check</code>. This is intentional per the bug report's option 2 recommendation — the previous semantics were a bug, the rename preserves the useful side-effect under its honest name.</p></div><div class="wiki-nav"><a href="index.html">← retour à core/client</a> · <a href="../../log.html">voir log</a></div></div></main></div></body></html>

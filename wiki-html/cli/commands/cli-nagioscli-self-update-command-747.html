@@ -1,0 +1,111 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>#747 — CLI / nagioscli self-update command — kenboard wiki</title><style>body{margin:0;font-family:system-ui,sans-serif;color:#222;background:#fff}
+.layout{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+nav.sidebar{background:#f6f8fa;border-right:1px solid #d0d7de;padding:16px;
+  overflow-y:auto;font-size:13px}
+nav.sidebar h1{font-size:14px;text-transform:uppercase;color:#57606a;margin:0 0 12px}
+nav.sidebar ul{list-style:none;padding:0;margin:0}
+nav.sidebar li{margin:2px 0}
+nav.sidebar a{color:#0969da;text-decoration:none}
+nav.sidebar a:hover{text-decoration:underline}
+nav.sidebar a.current{font-weight:600;color:#1a1a1a}
+main{padding:24px 32px;max-width:900px}
+main h1{margin-top:0}
+main code{background:#f6f8fa;padding:1px 4px;border-radius:3px;font-size:90%}
+main pre{background:#f6f8fa;padding:12px;border-radius:6px;overflow-x:auto}
+main pre code{background:transparent;padding:0}
+main a{color:#0969da}
+/* Task detail (#376f — mirrors templates/modals/task_fullscreen.html) */
+.fullscreen-card{background:#fff;border:1px solid #d0d7de;border-radius:10px;
+  padding:32px 36px;max-width:760px}
+.fullscreen-header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.fullscreen-id{font-size:12px;color:#57606a;font-weight:600}
+.fullscreen-status{font-size:11px;text-transform:uppercase;letter-spacing:.5px;
+  color:#57606a;background:#f6f8fa;padding:3px 8px;border-radius:10px}
+.fullscreen-status.status-todo{background:#ddf4ff;color:#0969da}
+.fullscreen-status.status-doing{background:#fff8c5;color:#9a6700}
+.fullscreen-status.status-review{background:#dafbe1;color:#1a7f37}
+.fullscreen-status.status-done{background:#eaeef2;color:#57606a}
+.fullscreen-title{font-size:22px;font-weight:700;margin:0 0 16px;line-height:1.3}
+.fullscreen-meta{display:flex;align-items:center;gap:10px;margin-bottom:20px;
+  font-size:13px;color:#57606a}
+.task-avatar{width:28px;height:28px;border-radius:50%;display:flex;
+  align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px}
+.fs-who{font-weight:600;color:#222}
+.fullscreen-desc{font-size:14px;line-height:1.7;border-top:1px solid #d0d7de;
+  padding-top:16px}
+.fullscreen-desc h1,.fullscreen-desc h2,.fullscreen-desc h3{margin-top:16px;
+  margin-bottom:8px}
+.fullscreen-desc pre{background:#f6f8fa;border-radius:4px;padding:12px;
+  overflow-x:auto;font-size:12px}
+.fullscreen-desc code{background:#f6f8fa;border-radius:3px;padding:1px 4px;font-size:12px}
+.fullscreen-desc pre code{background:transparent;padding:0}
+.fullscreen-desc ul,.fullscreen-desc ol{padding-left:20px}
+.wiki-nav{margin-top:20px;padding-top:12px;border-top:1px solid #d0d7de;
+  font-size:13px;color:#57606a}
+.wiki-nav a{color:#0969da}
+</style></head><body><div class="layout"><nav class="sidebar"><h1>kenboard wiki</h1><ul><li><a href="../index.html">Home</a></li><li style="padding-left:0px"><a href="../../cli/index.html">CLI layer</a></li><li style="padding-left:12px"><a href="../../cli/commands/index.html" class="current">CLI commands</a></li><li style="padding-left:0px"><a href="../../core/index.html">Core</a></li><li style="padding-left:12px"><a href="../../core/models/index.html">Core / models</a></li><li style="padding-left:12px"><a href="../../core/client/index.html">Core / client</a></li><li style="padding-left:0px"><a href="../../services/index.html">Services</a></li><li style="padding-left:0px"><a href="../../tests/index.html">Tests</a></li><li style="padding-left:0px"><a href="../../packaging/index.html">Packaging & tooling</a></li><li style="padding-left:0px"><a href="../../docs/index.html">Documentation</a></li></ul></nav><main><div class="fullscreen-card"><div class="fullscreen-header"><span class="fullscreen-id">#747</span><span class="fullscreen-status status-done">done</span></div><h2 class="fullscreen-title">CLI / nagioscli self-update command</h2><div class="fullscreen-meta"><div class="task-avatar" style="background:#0a3069">C</div><span class="fs-who">Claude</span><span>Classified 2026-07-28</span><span>by key:c6597e8c-4d84-44f1-821e-8f9ad6720cf6</span></div><div class="fullscreen-desc"><h2>Contexte</h2>
+<p><code>nagioscli</code> est distribué sur PyPI sous le nom <code>nachos</code>. Aujourd'hui,
+mettre à jour l'outil impose à l'utilisateur de connaître ce détail
+(<code>pip install -U nachos</code>, et pas <code>pip install -U nagioscli</code>), ce qui
+est un piège récurrent vu le décalage repo / module / binaire vs.
+distribution.</p>
+<h2>Objectif</h2>
+<p>Ajouter une commande <code>nagioscli self-update</code> qui met à jour le binaire
+vers la dernière version publiée sur PyPI sans que l'utilisateur ait à
+mémoriser le nom de la distribution.</p>
+<h2>Comportement attendu</h2>
+<ul>
+<li><code>nagioscli self-update</code> interroge PyPI pour récupérer la dernière
+  version de la distribution <code>nachos</code>.</li>
+<li>Compare avec <code>nagioscli.__version__</code> :</li>
+<li>si déjà à jour : message clair (<code>Already on latest: X.Y.Z</code>) et
+    code de sortie 0.</li>
+<li>sinon : annonce <code>Updating nachos X.Y.Z -&gt; A.B.C</code> puis exécute
+    <code>pip install --upgrade nachos</code> (via <code>sys.executable -m pip</code>) dans
+    le bon interpréteur (pipx / venv / system).</li>
+<li><code>--check</code> : n'effectue pas la mise à jour, imprime juste la version
+  disponible et termine avec un code de sortie != 0 si une mise à jour
+  est disponible (utile pour les hooks shell / CI).</li>
+<li><code>--pre</code> : autorise les pré-releases lors du lookup et du <code>pip
+  install</code>.</li>
+<li>Détection pipx : si <code>nagioscli</code> tourne dans un environnement géré
+  par pipx (variable <code>PIPX_HOME</code> ou chemin contenant <code>/pipx/venvs/</code>),
+  préférer <code>pipx upgrade nachos</code> et retomber sur <code>pip</code> si pipx est
+  introuvable. Afficher la commande effectivement lancée avant
+  exécution.</li>
+<li>En cas d'échec réseau / 404 / HTTP non-200 : message d'erreur clair,
+  code de sortie 1, pas de traceback brut.</li>
+</ul>
+<h2>Contraintes</h2>
+<ul>
+<li>Pas de nouvelle dépendance runtime : utiliser <code>urllib</code> de la stdlib
+  pour interroger <code>https://pypi.org/pypi/nachos/json</code> (cohérent avec
+  <code>core/client.py</code>).</li>
+<li>Respecter le quirk de nommage : le code doit explicitement mettre
+  à jour la distribution <code>nachos</code>, pas <code>nagioscli</code>. Documenter ce
+  point en commentaire court à l'endroit où le nom est codé en dur.</li>
+<li>Couverture de test :</li>
+<li>mock de la réponse PyPI JSON (cas à jour, cas update disponible,
+    cas pré-release filtrée),</li>
+<li>mock de <code>subprocess.run</code> pour vérifier la commande construite
+    (pip vs. pipx, <code>--pre</code> ou pas),</li>
+<li>cas erreur réseau.</li>
+</ul>
+<h2>Pistes d'implémentation</h2>
+<ul>
+<li>Nouveau fichier <code>nagioscli/cli/commands/self_update.py</code> avec un
+  handler Click, enregistré dans le groupe principal.</li>
+<li>Helper <code>nagioscli/services/self_update.py</code> pour la logique pure
+  (fetch PyPI, comparaison de versions, construction de la commande
+  d'upgrade) afin de garder le handler CLI mince et testable.</li>
+<li>Comparaison de versions : <code>packaging.version.Version</code> est déjà tiré
+  transitivement par PDM ; vérifier avant d'ajouter <code>packaging</code> comme
+  dépendance explicite — sinon implémenter un comparateur SemVer
+  minimal local.</li>
+</ul>
+<h2>Hors scope</h2>
+<ul>
+<li>Auto-update silencieux au démarrage.</li>
+<li>Vérification de signatures / hashes PyPI.</li>
+<li>Downgrade vers une version arbitraire (<code>--version X.Y.Z</code>).</li>
+</ul></div><div class="wiki-nav"><a href="index.html">← retour à cli/commands</a> · <a href="../../log.html">voir log</a></div></div></main></div></body></html>

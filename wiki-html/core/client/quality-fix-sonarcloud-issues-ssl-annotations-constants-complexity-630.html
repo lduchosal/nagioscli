@@ -1,0 +1,78 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>#630 — QUALITY / Fix SonarCloud issues (SSL annotations, constants, complexity) — kenboard wiki</title><style>body{margin:0;font-family:system-ui,sans-serif;color:#222;background:#fff}
+.layout{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+nav.sidebar{background:#f6f8fa;border-right:1px solid #d0d7de;padding:16px;
+  overflow-y:auto;font-size:13px}
+nav.sidebar h1{font-size:14px;text-transform:uppercase;color:#57606a;margin:0 0 12px}
+nav.sidebar ul{list-style:none;padding:0;margin:0}
+nav.sidebar li{margin:2px 0}
+nav.sidebar a{color:#0969da;text-decoration:none}
+nav.sidebar a:hover{text-decoration:underline}
+nav.sidebar a.current{font-weight:600;color:#1a1a1a}
+main{padding:24px 32px;max-width:900px}
+main h1{margin-top:0}
+main code{background:#f6f8fa;padding:1px 4px;border-radius:3px;font-size:90%}
+main pre{background:#f6f8fa;padding:12px;border-radius:6px;overflow-x:auto}
+main pre code{background:transparent;padding:0}
+main a{color:#0969da}
+/* Task detail (#376f — mirrors templates/modals/task_fullscreen.html) */
+.fullscreen-card{background:#fff;border:1px solid #d0d7de;border-radius:10px;
+  padding:32px 36px;max-width:760px}
+.fullscreen-header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.fullscreen-id{font-size:12px;color:#57606a;font-weight:600}
+.fullscreen-status{font-size:11px;text-transform:uppercase;letter-spacing:.5px;
+  color:#57606a;background:#f6f8fa;padding:3px 8px;border-radius:10px}
+.fullscreen-status.status-todo{background:#ddf4ff;color:#0969da}
+.fullscreen-status.status-doing{background:#fff8c5;color:#9a6700}
+.fullscreen-status.status-review{background:#dafbe1;color:#1a7f37}
+.fullscreen-status.status-done{background:#eaeef2;color:#57606a}
+.fullscreen-title{font-size:22px;font-weight:700;margin:0 0 16px;line-height:1.3}
+.fullscreen-meta{display:flex;align-items:center;gap:10px;margin-bottom:20px;
+  font-size:13px;color:#57606a}
+.task-avatar{width:28px;height:28px;border-radius:50%;display:flex;
+  align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px}
+.fs-who{font-weight:600;color:#222}
+.fullscreen-desc{font-size:14px;line-height:1.7;border-top:1px solid #d0d7de;
+  padding-top:16px}
+.fullscreen-desc h1,.fullscreen-desc h2,.fullscreen-desc h3{margin-top:16px;
+  margin-bottom:8px}
+.fullscreen-desc pre{background:#f6f8fa;border-radius:4px;padding:12px;
+  overflow-x:auto;font-size:12px}
+.fullscreen-desc code{background:#f6f8fa;border-radius:3px;padding:1px 4px;font-size:12px}
+.fullscreen-desc pre code{background:transparent;padding:0}
+.fullscreen-desc ul,.fullscreen-desc ol{padding-left:20px}
+.wiki-nav{margin-top:20px;padding-top:12px;border-top:1px solid #d0d7de;
+  font-size:13px;color:#57606a}
+.wiki-nav a{color:#0969da}
+</style></head><body><div class="layout"><nav class="sidebar"><h1>kenboard wiki</h1><ul><li><a href="../index.html">Home</a></li><li style="padding-left:0px"><a href="../../cli/index.html">CLI layer</a></li><li style="padding-left:12px"><a href="../../cli/commands/index.html">CLI commands</a></li><li style="padding-left:0px"><a href="../../core/index.html">Core</a></li><li style="padding-left:12px"><a href="../../core/models/index.html">Core / models</a></li><li style="padding-left:12px"><a href="../../core/client/index.html" class="current">Core / client</a></li><li style="padding-left:0px"><a href="../../services/index.html">Services</a></li><li style="padding-left:0px"><a href="../../tests/index.html">Tests</a></li><li style="padding-left:0px"><a href="../../packaging/index.html">Packaging & tooling</a></li><li style="padding-left:0px"><a href="../../docs/index.html">Documentation</a></li></ul></nav><main><div class="fullscreen-card"><div class="fullscreen-header"><span class="fullscreen-id">#630</span><span class="fullscreen-status status-done">done</span></div><h2 class="fullscreen-title">QUALITY / Fix SonarCloud issues (SSL annotations, constants, complexity)</h2><div class="fullscreen-meta"><div class="task-avatar" style="background:#0a3069">C</div><span class="fs-who">Claude</span><span>Classified 2026-06-02</span><span>by key:c6597e8c-4d84-44f1-821e-8f9ad6720cf6</span></div><div class="fullscreen-desc"><h2>Contexte</h2>
+<p>SonarCloud remontait 7 issues ouvertes sur le projet <code>lduchosal_nagioscli</code> :</p>
+<ul>
+<li><strong>python:S5527</strong> (Vulnerability, HIGH) — <code>nagioscli/core/client.py:51</code> — <em>Enable server hostname verification on this SSL/TLS connection.</em></li>
+<li><strong>python:S4830</strong> (Vulnerability, HIGH) — <code>nagioscli/core/client.py:53</code> — <em>Enable server certificate validation on this SSL/TLS connection.</em></li>
+<li><strong>python:S1192</strong> ×3 (Code smell) — <code>nagioscli/core/client.py</code> lignes 265, 268, 427 — littéraux <code>"statusjson.cgi"</code>, <code>"Unknown error"</code>, <code>"successfully submitted"</code> dupliqués ≥5 fois.</li>
+<li><strong>python:S3776</strong> (Code smell) — <code>nagioscli/cli/commands/problems.py:16</code> — complexité cognitive 17 (max 15).</li>
+<li><strong>python:S3776</strong> (Code smell) — <code>nagioscli/cli/commands/status.py:15</code> — complexité cognitive 24 (max 15).</li>
+</ul>
+<h2>Résolution</h2>
+<p>Commit <code>9b025b8</code> — <em>refactor: address SonarCloud issues (SSL annotations, constants, complexity)</em>.</p>
+<h3>Modifications</h3>
+<ul>
+<li><code>nagioscli/core/client.py</code></li>
+<li>Ajout de constantes module-level : <code>_STATUS_JSON_CGI</code>, <code>_UNKNOWN_ERROR</code>, <code>_SUCCESS_MARKER</code> ; remplacement des 5+5+5 occurrences (S1192).</li>
+<li>Annotation <code># NOSONAR</code> sur <code>ssl_context.check_hostname = False</code> et <code>ssl_context.verify_mode = ssl.CERT_NONE</code> avec rationale : opt-in utilisateur explicite via <code>verify_ssl=False</code> (Nagios self-signed). Comportement runtime inchangé (S5527, S4830).</li>
+<li><code>nagioscli/cli/commands/problems.py</code></li>
+<li>Extraction de <code>_emit_problems_json(services)</code> et <code>_emit_problems_text(services)</code> ; le corps de <code>problems_cmd</code> ne contient plus que le dispatch json/quiet/text (S3776).</li>
+<li><code>nagioscli/cli/commands/status.py</code></li>
+<li>Extraction de <code>_emit_service_json/_text(svc)</code> et <code>_emit_host_json/_text(host)</code> ; <code>service_status_cmd</code> et <code>host_status_cmd</code> se réduisent au dispatch (S3776).</li>
+</ul>
+<h3>Comportements obtenus</h3>
+<ul>
+<li>Toutes les sorties CLI (<code>status service</code>, <code>status host</code>, <code>problems</code> — JSON, quiet, texte) sont byte-pour-byte identiques à avant.</li>
+<li><code>verify_ssl=False</code> continue de désactiver la vérification du certificat ET du hostname comme avant (pas de durcissement silencieux du défaut).</li>
+<li><code>pdm run lint</code> (ruff) ✓, <code>pdm run typecheck</code> (mypy strict) ✓, <code>pdm run test-quick</code> 45/45 ✓.</li>
+</ul>
+<h3>Garde-fous</h3>
+<ul>
+<li><code>verify_ssl</code> reste à <code>False</code> par défaut dans <code>NagiosConfig</code> — durcir le défaut serait un breaking change pour les configs existantes qui n'ont pas la clé <code>verify_ssl</code> dans <code>[settings]</code>. À traiter dans une tâche dédiée si voulu.</li>
+<li>Les constantes sont préfixées <code>_</code> pour signaler qu'elles sont privées au module (pas une API publique).</li>
+<li>Les helpers <code>_emit_*</code> sont aussi privés au module — pas de dépendance externe à maintenir.</li>
+</ul></div><div class="wiki-nav"><a href="index.html">← retour à core/client</a> · <a href="../../log.html">voir log</a></div></div></main></div></body></html>

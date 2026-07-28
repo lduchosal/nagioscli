@@ -1,0 +1,130 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>#601 — NAGIOSCLI / Upstream bug — cmd.cgi commands fail (missing CSRF + wrong date format) — kenboard wiki</title><style>body{margin:0;font-family:system-ui,sans-serif;color:#222;background:#fff}
+.layout{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+nav.sidebar{background:#f6f8fa;border-right:1px solid #d0d7de;padding:16px;
+  overflow-y:auto;font-size:13px}
+nav.sidebar h1{font-size:14px;text-transform:uppercase;color:#57606a;margin:0 0 12px}
+nav.sidebar ul{list-style:none;padding:0;margin:0}
+nav.sidebar li{margin:2px 0}
+nav.sidebar a{color:#0969da;text-decoration:none}
+nav.sidebar a:hover{text-decoration:underline}
+nav.sidebar a.current{font-weight:600;color:#1a1a1a}
+main{padding:24px 32px;max-width:900px}
+main h1{margin-top:0}
+main code{background:#f6f8fa;padding:1px 4px;border-radius:3px;font-size:90%}
+main pre{background:#f6f8fa;padding:12px;border-radius:6px;overflow-x:auto}
+main pre code{background:transparent;padding:0}
+main a{color:#0969da}
+/* Task detail (#376f — mirrors templates/modals/task_fullscreen.html) */
+.fullscreen-card{background:#fff;border:1px solid #d0d7de;border-radius:10px;
+  padding:32px 36px;max-width:760px}
+.fullscreen-header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.fullscreen-id{font-size:12px;color:#57606a;font-weight:600}
+.fullscreen-status{font-size:11px;text-transform:uppercase;letter-spacing:.5px;
+  color:#57606a;background:#f6f8fa;padding:3px 8px;border-radius:10px}
+.fullscreen-status.status-todo{background:#ddf4ff;color:#0969da}
+.fullscreen-status.status-doing{background:#fff8c5;color:#9a6700}
+.fullscreen-status.status-review{background:#dafbe1;color:#1a7f37}
+.fullscreen-status.status-done{background:#eaeef2;color:#57606a}
+.fullscreen-title{font-size:22px;font-weight:700;margin:0 0 16px;line-height:1.3}
+.fullscreen-meta{display:flex;align-items:center;gap:10px;margin-bottom:20px;
+  font-size:13px;color:#57606a}
+.task-avatar{width:28px;height:28px;border-radius:50%;display:flex;
+  align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px}
+.fs-who{font-weight:600;color:#222}
+.fullscreen-desc{font-size:14px;line-height:1.7;border-top:1px solid #d0d7de;
+  padding-top:16px}
+.fullscreen-desc h1,.fullscreen-desc h2,.fullscreen-desc h3{margin-top:16px;
+  margin-bottom:8px}
+.fullscreen-desc pre{background:#f6f8fa;border-radius:4px;padding:12px;
+  overflow-x:auto;font-size:12px}
+.fullscreen-desc code{background:#f6f8fa;border-radius:3px;padding:1px 4px;font-size:12px}
+.fullscreen-desc pre code{background:transparent;padding:0}
+.fullscreen-desc ul,.fullscreen-desc ol{padding-left:20px}
+.wiki-nav{margin-top:20px;padding-top:12px;border-top:1px solid #d0d7de;
+  font-size:13px;color:#57606a}
+.wiki-nav a{color:#0969da}
+</style></head><body><div class="layout"><nav class="sidebar"><h1>kenboard wiki</h1><ul><li><a href="../index.html">Home</a></li><li style="padding-left:0px"><a href="../../cli/index.html">CLI layer</a></li><li style="padding-left:12px"><a href="../../cli/commands/index.html">CLI commands</a></li><li style="padding-left:0px"><a href="../../core/index.html">Core</a></li><li style="padding-left:12px"><a href="../../core/models/index.html">Core / models</a></li><li style="padding-left:12px"><a href="../../core/client/index.html" class="current">Core / client</a></li><li style="padding-left:0px"><a href="../../services/index.html">Services</a></li><li style="padding-left:0px"><a href="../../tests/index.html">Tests</a></li><li style="padding-left:0px"><a href="../../packaging/index.html">Packaging & tooling</a></li><li style="padding-left:0px"><a href="../../docs/index.html">Documentation</a></li></ul></nav><main><div class="fullscreen-card"><div class="fullscreen-header"><span class="fullscreen-id">#601</span><span class="fullscreen-status status-done">done</span></div><h2 class="fullscreen-title">NAGIOSCLI / Upstream bug — cmd.cgi commands fail (missing CSRF + wrong date format)</h2><div class="fullscreen-meta"><div class="task-avatar" style="background:#0a3069">C</div><span class="fs-who">Claude</span><span>Classified 2026-05-31</span><span>by key:c6597e8c-4d84-44f1-821e-8f9ad6720cf6</span></div><div class="fullscreen-desc"><p>Bug report à transmettre upstream (https://github.com/lduchosal/nagioscli/issues).</p>
+<hr />
+<h2>Title</h2>
+<p>cmd.cgi commands (check, check-host, ack, ack-host) silently fail on Nagios Core 4.4+ — missing CSRF token + hardcoded US date format</p>
+<h2>Summary</h2>
+<p>All commands using cmd.cgi (force-check, ack) return 'Failed to submit' on Nagios Core 4.4+ because the CGI now requires a CSRF token, which nagioscli does not handle. Independently, the start_time is POSTed in US date format (MM-DD-YYYY), while many Nagios installs use European (DD-MM-YYYY) as their CGI date_format.</p>
+<h2>Nagios behavior</h2>
+<p>Since Nagios Core 4.4 (CSRF protection enabled by default), cmd.cgi flow is:
+1. GET cmd.cgi?cmd_typ=N&amp;host=...&amp;service=... — returns an HTML form, sets cookie 'NagFormId=<token>', includes hidden input 'nagFormId=<same token>'
+2. POST cmd.cgi with the cookie + 'nagFormId=<token>' field — server validates cookie matches field; otherwise returns 'Error: Invalid or missing CSRF cookie!'</p>
+<p>Current nagioscli skips step 1 entirely; POSTs without cookie or token; gets the CSRF error in the response body and falls back to 'Failed to submit'.</p>
+<h2>Reproduction</h2>
+<pre><code>nagioscli check rs.example.com SOMESERVICE -vvv
+# DEBUG: POST .../cmd.cgi
+# DEBUG: Data: {'cmd_typ': '7', 'cmd_mod': '2', ...}
+# DEBUG: Response: &lt;html&gt;... &lt;p&gt;Error: Invalid or missing CSRF cookie!&lt;/p&gt; ...
+# Failed to submit force check ...
+</code></pre>
+<p>Verified against Nagios Core 4.x. Manual curl reproducing the working flow:
+    # GET to seed cookie + token
+    curl -u USER:PASS -c jar -b jar \
+      'https://nagios/cgi-bin/cmd.cgi?cmd_typ=7&amp;host=H&amp;service=S'
+    # parse hidden <INPUT TYPE='hidden' NAME='nagFormId' VALUE='...'> from response
+    # POST with cookie + token
+    curl -u USER:PASS -c jar -b jar -X POST \
+      -d 'cmd_typ=7&amp;cmd_mod=2&amp;nagFormId=...&amp;host=H&amp;service=S&amp;start_time=...&amp;btnSubmit=Commit' \
+      'https://nagios/cgi-bin/cmd.cgi'</p>
+<h2>Affected commands</h2>
+<ul>
+<li>check (cmd_typ=7, SCHEDULE_FORCED_SVC_CHECK)</li>
+<li>check-host (cmd_typ=17, SCHEDULE_FORCED_HOST_CHECK)</li>
+<li>ack (cmd_typ=34, ACKNOWLEDGE_SVC_PROBLEM)</li>
+<li>ack-host (cmd_typ=33, ACKNOWLEDGE_HOST_PROBLEM)</li>
+</ul>
+<p>Read-only statusjson.cgi commands (problems, status, hosts, services) are unaffected.</p>
+<h2>Root cause</h2>
+<p>nagioscli/core/client.py:_post — builds POST directly, no GET preflight, no cookie jar.</p>
+<h2>Fix proposal</h2>
+<ol>
+<li>In NagiosClient._post (or a wrapper applied to cmd_typ-bearing POSTs):</li>
+<li>First do a GET on cmd.cgi with the same cmd_typ + host/service params</li>
+<li>Capture Set-Cookie 'NagFormId' value</li>
+<li>Parse hidden input nagFormId from the HTML body (regex on TYPE='hidden' NAME='nagFormId' VALUE='...')</li>
+<li>POST with both the cookie AND the nagFormId field added to data</li>
+<li>Add an integration test that mocks the GET preflight and asserts the POST contains the nagFormId field + matching cookie</li>
+</ol>
+<h2>Date format issue (independent, smaller)</h2>
+<p>b29ed16 switched start_time to %m-%d-%Y, but Nagios accepts whatever its date_format directive declares. On installs using date_format=euro (DD-MM-YYYY), the current US format is rejected. Suggested approaches:
+- Make the format configurable via [settings] in nagioscli.ini (e.g. start_time_format=%d-%m-%Y)
+- Or auto-detect by parsing the start_time value from the GET preflight form (the same GET needed for CSRF already returns the server-formatted current time)</p>
+<h2>Impact</h2>
+<p>Severity: high for any cmd.cgi consumer. Currently nagioscli ack/check/check-host/ack-host are no-ops on default Nagios installs, with the upside that the error is reported (vs silently swallowed by other tools).</p>
+<h2>Discovery</h2>
+<p>While migrating 2113.ch monitoring scripts to nagioscli (ken #598). Confirmed via last_check timestamp before/after a force-check call: unchanged, proving the command never reached Nagios. Our own in-house nagios_force_check.py had the same bug, undetected because it didn't check the response body — nagioscli at least surfaces the failure clearly.</p>
+<hr />
+<h2>Résolution</h2>
+<h3>Modifications</h3>
+<ul>
+<li>nagioscli/core/client.py — added <code>_csrf_preflight(preflight_params)</code>: GETs cmd.cgi with the same <code>cmd_typ</code> + host/service params, captures <code>NagFormId</code> from <code>Set-Cookie</code>, and extracts the hidden <code>nagFormId</code> value from the HTML body. Two compiled regexes (<code>_NAGFORM_COOKIE_RE</code>, <code>_NAGFORM_INPUT_RE</code>) handle both single- and double-quoted Nagios markup.</li>
+<li>nagioscli/core/client.py — added <code>_cmd_post(data, preflight_params)</code>: thin wrapper that runs the preflight, appends <code>nagFormId=&lt;token&gt;</code> to the POST body, and forwards the <code>NagFormId</code> cookie to <code>_post</code>. The four cmd.cgi entrypoints (<code>force_service_check</code>, <code>force_host_check</code>, <code>acknowledge_service</code>, <code>acknowledge_host</code>) now route through it with the correct <code>cmd_typ</code>/host/service preflight scope.</li>
+<li>nagioscli/core/client.py — refactored <code>_post</code> to accept <code>csrf_cookie</code> and extracted auth/cookie composition into <code>_apply_auth</code>. Vouch and nginx-token auth paths now compose cookies cleanly with the CSRF cookie instead of overwriting each other.</li>
+<li>nagioscli/core/client.py — <code>start_time</code> for <code>force_service_check</code> / <code>force_host_check</code> now uses <code>self.config.start_time_format</code> instead of a hardcoded <code>%m-%d-%Y %H:%M:%S</code>. Default preserves the historical US format so no existing US deployment regresses.</li>
+<li>nagioscli/core/config.py — added <code>NagiosConfig.start_time_format: str = "%m-%d-%Y %H:%M:%S"</code> and wired <code>[settings] start_time_format</code> parsing.</li>
+<li>nagioscli.ini.example — documented <code>start_time_format</code> with the strftime patterns for the three Nagios <code>cgi.cfg date_format</code> values (us / euro / iso8601).</li>
+<li>doc/SPEC.md — added <code>start_time_format</code> to the example <code>[settings]</code> block.</li>
+<li>tests/unit/test_client_csrf.py (new) — 12 tests covering:</li>
+<li>Regex correctness (<code>_NAGFORM_INPUT_RE</code>, <code>_NAGFORM_COOKIE_RE</code>) for both quote styles + Set-Cookie position variants.</li>
+<li>All four cmd.cgi methods: assert exactly one GET preflight + one POST, correct <code>cmd_typ</code> in both, <code>nagFormId</code> field echoed in POST body, <code>NagFormId=&lt;value&gt;</code> in the request <code>Cookie</code> header alongside <code>Authorization: Basic</code>.</li>
+<li>Missing-token degenerate case: POST still happens (with empty <code>nagFormId</code>, no Cookie) so the server's clear CSRF error reaches the user instead of a silent abort.</li>
+<li><code>start_time_format</code> round-trip for US / Euro / ISO patterns; default-value assertion.</li>
+</ul>
+<h3>Comportements obtenus</h3>
+<ul>
+<li><code>nagioscli check</code>, <code>check-host</code>, <code>ack</code>, <code>ack-host</code> now succeed on Nagios Core 4.4+ default installs — every cmd.cgi POST carries a valid <code>nagFormId</code> + <code>NagFormId</code> cookie pair captured from a matching GET preflight.</li>
+<li>Operators on <code>date_format=euro</code> (<code>%d-%m-%Y</code>) or <code>iso8601</code> (<code>%Y-%m-%d</code>) installs can set <code>start_time_format</code> in <code>[settings]</code> instead of patching the source.</li>
+<li>Vouch and nginx-token auth users keep their existing cookies; the CSRF cookie is merged into the same <code>Cookie:</code> header rather than clobbering vouch.</li>
+<li>Read-only commands (statusjson.cgi) are unchanged — preflight only runs on cmd.cgi entrypoints.</li>
+</ul>
+<h3>Garde-fous</h3>
+<ul>
+<li>pytest: 43 passed (was 31) — 12 new tests in <code>tests/unit/test_client_csrf.py</code>, all pre-existing tests still green.</li>
+<li>ruff check (nagioscli + tests): clean (<code>All checks passed!</code>).</li>
+<li>mypy (nagioscli): clean (<code>Success: no issues found in 20 source files</code>).</li>
+<li>No public API or CLI signature changed; only additive (<code>start_time_format</code> config field defaults to historical behavior).</li>
+</ul></div><div class="wiki-nav"><a href="index.html">← retour à core/client</a> · <a href="../../log.html">voir log</a></div></div></main></div></body></html>

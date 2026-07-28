@@ -1,0 +1,172 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>#780 — NAGIOSCLI / status service: exposer long_plugin_output, perf_data, last_check, current_attempt (statusjson.cgi) — kenboard wiki</title><style>body{margin:0;font-family:system-ui,sans-serif;color:#222;background:#fff}
+.layout{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+nav.sidebar{background:#f6f8fa;border-right:1px solid #d0d7de;padding:16px;
+  overflow-y:auto;font-size:13px}
+nav.sidebar h1{font-size:14px;text-transform:uppercase;color:#57606a;margin:0 0 12px}
+nav.sidebar ul{list-style:none;padding:0;margin:0}
+nav.sidebar li{margin:2px 0}
+nav.sidebar a{color:#0969da;text-decoration:none}
+nav.sidebar a:hover{text-decoration:underline}
+nav.sidebar a.current{font-weight:600;color:#1a1a1a}
+main{padding:24px 32px;max-width:900px}
+main h1{margin-top:0}
+main code{background:#f6f8fa;padding:1px 4px;border-radius:3px;font-size:90%}
+main pre{background:#f6f8fa;padding:12px;border-radius:6px;overflow-x:auto}
+main pre code{background:transparent;padding:0}
+main a{color:#0969da}
+/* Task detail (#376f — mirrors templates/modals/task_fullscreen.html) */
+.fullscreen-card{background:#fff;border:1px solid #d0d7de;border-radius:10px;
+  padding:32px 36px;max-width:760px}
+.fullscreen-header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.fullscreen-id{font-size:12px;color:#57606a;font-weight:600}
+.fullscreen-status{font-size:11px;text-transform:uppercase;letter-spacing:.5px;
+  color:#57606a;background:#f6f8fa;padding:3px 8px;border-radius:10px}
+.fullscreen-status.status-todo{background:#ddf4ff;color:#0969da}
+.fullscreen-status.status-doing{background:#fff8c5;color:#9a6700}
+.fullscreen-status.status-review{background:#dafbe1;color:#1a7f37}
+.fullscreen-status.status-done{background:#eaeef2;color:#57606a}
+.fullscreen-title{font-size:22px;font-weight:700;margin:0 0 16px;line-height:1.3}
+.fullscreen-meta{display:flex;align-items:center;gap:10px;margin-bottom:20px;
+  font-size:13px;color:#57606a}
+.task-avatar{width:28px;height:28px;border-radius:50%;display:flex;
+  align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px}
+.fs-who{font-weight:600;color:#222}
+.fullscreen-desc{font-size:14px;line-height:1.7;border-top:1px solid #d0d7de;
+  padding-top:16px}
+.fullscreen-desc h1,.fullscreen-desc h2,.fullscreen-desc h3{margin-top:16px;
+  margin-bottom:8px}
+.fullscreen-desc pre{background:#f6f8fa;border-radius:4px;padding:12px;
+  overflow-x:auto;font-size:12px}
+.fullscreen-desc code{background:#f6f8fa;border-radius:3px;padding:1px 4px;font-size:12px}
+.fullscreen-desc pre code{background:transparent;padding:0}
+.fullscreen-desc ul,.fullscreen-desc ol{padding-left:20px}
+.wiki-nav{margin-top:20px;padding-top:12px;border-top:1px solid #d0d7de;
+  font-size:13px;color:#57606a}
+.wiki-nav a{color:#0969da}
+</style></head><body><div class="layout"><nav class="sidebar"><h1>kenboard wiki</h1><ul><li><a href="../index.html">Home</a></li><li style="padding-left:0px"><a href="../../cli/index.html">CLI layer</a></li><li style="padding-left:12px"><a href="../../cli/commands/index.html" class="current">CLI commands</a></li><li style="padding-left:0px"><a href="../../core/index.html">Core</a></li><li style="padding-left:12px"><a href="../../core/models/index.html">Core / models</a></li><li style="padding-left:12px"><a href="../../core/client/index.html">Core / client</a></li><li style="padding-left:0px"><a href="../../services/index.html">Services</a></li><li style="padding-left:0px"><a href="../../tests/index.html">Tests</a></li><li style="padding-left:0px"><a href="../../packaging/index.html">Packaging & tooling</a></li><li style="padding-left:0px"><a href="../../docs/index.html">Documentation</a></li></ul></nav><main><div class="fullscreen-card"><div class="fullscreen-header"><span class="fullscreen-id">#780</span><span class="fullscreen-status status-done">done</span></div><h2 class="fullscreen-title">NAGIOSCLI / status service: exposer long_plugin_output, perf_data, last_check, current_attempt (statusjson.cgi)</h2><div class="fullscreen-meta"><div class="task-avatar" style="background:#0a3069">C</div><span class="fs-who">Claude</span><span>Classified 2026-06-09</span><span>by key:c6597e8c-4d84-44f1-821e-8f9ad6720cf6</span></div><div class="fullscreen-desc"><h2>Problème</h2>
+<p><code>nagioscli status service &lt;host&gt; &lt;svc&gt; --json</code> ne ramène que ~7 champs synthétiques :</p>
+<pre><code class="language-json">{
+  &quot;host&quot;: &quot;...&quot;, &quot;service&quot;: &quot;...&quot;,
+  &quot;status&quot;: 16, &quot;status_text&quot;: &quot;CRITICAL&quot;,
+  &quot;output&quot;: &quot;DF CRITICAL - zroot/backup is 95.35 (outside range 0:95)&quot;,
+  &quot;checks_enabled&quot;: true, &quot;notifications_enabled&quot;: true,
+  &quot;acknowledged&quot;: true, &quot;downtime&quot;: false
+}
+</code></pre>
+<p>Insuffisant pour faire un vrai triage depuis le laptop / un agent : il manque le détail multi-ligne du plugin, les perfdata, l'historique d'état, le compteur d'attempts (soft/hard), la santé du check lui-même.</p>
+<h2>Source dispo (mais pas exposée)</h2>
+<p><code>statusjson.cgi?query=service&amp;hostname=…&amp;servicedescription=…</code> retourne déjà <code>data.service</code> avec tout ce qu'il faut. Exemple <code>mail2/DISK</code> (warning courant) :</p>
+<pre><code class="language-json">{
+  &quot;plugin_output&quot;: &quot;DF CRITICAL - zroot/backup is 95.35 (outside range 0:95)&quot;,
+  &quot;long_plugin_output&quot;: &quot;critical: zroot/backup is 95.35 (outside range 0:95)\n&quot;,
+  &quot;perf_data&quot;: &quot;'zmaildir/mailbox'=53.23;93;95;0 'zroot/ROOT/default'=89.39;93;95;0 'zroot/backup'=95.35;93;95;0 ...&quot;,
+  &quot;max_attempts&quot;: 6, &quot;current_attempt&quot;: 6,
+  &quot;state_type&quot;: 1,
+  &quot;last_check&quot;: 1781010038000, &quot;next_check&quot;: 1781010638000,
+  &quot;last_state_change&quot;: 1780990232000, &quot;last_hard_state_change&quot;: 1780990232000,
+  &quot;last_time_ok&quot;: 1780558512000, &quot;last_time_warning&quot;: 1780990232000, &quot;last_time_critical&quot;: 1781010038000,
+  &quot;last_notification&quot;: 0, &quot;current_notification_number&quot;: 21,
+  &quot;problem_has_been_acknowledged&quot;: true, &quot;acknowledgement_type&quot;: 2,
+  &quot;execution_time&quot;: 2.06, &quot;latency&quot;: 0.02,
+  &quot;scheduled_downtime_depth&quot;: 0,
+  &quot;checks_enabled&quot;: true, &quot;notifications_enabled&quot;: true
+}
+</code></pre>
+<p>Sans <code>perf_data</code>, le triage de <code>mail2/DISK</code> perd l'info-clé : c'est <code>zroot/backup=95.35</code> qui dépasse — les 13 autres datasets sont OK. Avec uniquement <code>output</code>, on doit ssh sur mail2 pour comprendre.</p>
+<h2>Champs à ajouter dans <code>--json</code></h2>
+<p>Pass-through (renommer en snake_case si on uniformise) :</p>
+<ul>
+<li><code>long_plugin_output</code></li>
+<li><code>perf_data</code></li>
+<li><code>current_attempt</code> / <code>max_attempts</code> / <code>state_type</code> (soft vs hard)</li>
+<li><code>last_check</code> / <code>next_check</code> / <code>last_state_change</code> / <code>last_hard_state_change</code></li>
+<li><code>last_time_ok</code> / <code>last_time_warning</code> / <code>last_time_critical</code> / <code>last_time_unknown</code></li>
+<li><code>last_notification</code> / <code>current_notification_number</code> / <code>acknowledgement_type</code></li>
+<li><code>execution_time</code> / <code>latency</code> / <code>scheduled_downtime_depth</code></li>
+</ul>
+<h2>Proposition d'API</h2>
+<p>Deux options :</p>
+<ol>
+<li><strong>Pass-through par défaut</strong> — <code>status service --json</code> retourne <code>data.service</code> brut (ou tout passé au through avec renommage cohérent). Simple, pas de breaking change pour les consommateurs qui lisent <code>.host</code>/<code>.status_text</code>/<code>.output</code>.</li>
+<li><strong>Flag opt-in</strong> — <code>nagioscli status service &lt;h&gt; &lt;s&gt; --detail</code> (ou <code>--full</code>) déclenche le pass-through complet. Préserve la sortie texte courte par défaut.</li>
+</ol>
+<p>Pref perso : (1) avec un mapping explicite (clé renommée <code>plugin_output</code>→<code>output</code>, <code>problem_has_been_acknowledged</code>→<code>acknowledged</code>, etc.) pour garder la compat lecteurs existants tout en exposant tout le reste.</p>
+<h2>Sortie texte (non-JSON)</h2>
+<p>La sortie texte courte peut rester telle quelle ; éventuellement ajouter <code>(soft|hard) attempt N/M</code> et une 2e ligne <code>long_plugin_output</code> quand non vide. Perfdata seulement avec <code>--perfdata</code> ou <code>--verbose</code>.</p>
+<h2>Repo / refs</h2>
+<ul>
+<li>Package PyPI : <code>nachos</code> (binaire <code>nagioscli</code>).</li>
+<li>Repo GitHub : https://github.com/lduchosal/nagioscli</li>
+<li>Précédents fix upstream : ken #599 (bitmap inversé), #601 (CSRF Nagios 4.4 cmd.cgi), #608 (<code>cmd_typ=96</code> pour host check).</li>
+<li>Méthode connue : équivalent curl déjà documenté dans <code>NAGIOS.md</code> § "Détail d'une alerte".</li>
+</ul>
+<h2>DoD</h2>
+<ul>
+<li><code>nagioscli status service &lt;h&gt; &lt;s&gt; --json</code> expose au minimum : <code>long_plugin_output</code>, <code>perf_data</code>, <code>current_attempt</code>, <code>max_attempts</code>, <code>state_type</code>, <code>last_check</code>, <code>last_state_change</code>, <code>execution_time</code>, <code>latency</code>.</li>
+<li>Pas de régression pour les consommateurs lisant <code>output</code>/<code>status</code>/<code>status_text</code>/<code>acknowledged</code>.</li>
+<li>Bump version, PR upstream lduchosal/nagioscli, mention ken # dans CHANGELOG.</li>
+</ul>
+<hr />
+<h2>Résolution</h2>
+<p>Approche <strong>(1) pass-through avec mapping explicite</strong> : tous les champs
+du payload <code>data.service</code> sont remontés dans <code>--json</code>, avec les clés
+historiques renommées préservées (<code>plugin_output</code>→<code>output</code>,
+<code>problem_has_been_acknowledged</code>→<code>acknowledged</code>, etc.).</p>
+<h3>Modifications</h3>
+<ul>
+<li><code>nagioscli/core/models.py</code> : <code>Service</code> dataclass étendu avec
+  <code>long_plugin_output</code>, <code>perf_data</code> (déjà présent), <code>current_attempt</code>,
+  <code>max_attempts</code>, <code>state_type</code>, <code>acknowledgement_type</code>,
+  <code>scheduled_downtime_depth</code>, <code>last_check</code>, <code>next_check</code>,
+  <code>last_state_change</code>, <code>last_hard_state_change</code>, <code>last_time_ok</code>,
+  <code>last_time_warning</code>, <code>last_time_critical</code>, <code>last_time_unknown</code>,
+  <code>last_notification</code>, <code>current_notification_number</code>,
+  <code>execution_time</code>, <code>latency</code>.</li>
+<li>Les anciens <code>last_check</code>/<code>last_state_change</code> typés
+    <code>datetime | None</code> (jamais peuplés, jamais lus dans le code ni
+    dans les tests) sont repurposed en <code>int</code> (ms epoch — c'est ce que
+    renvoie Nagios), pour un pass-through honnête.</li>
+<li>Idem côté <code>Host</code> pour cohérence (futur travail similaire).</li>
+<li><code>nagioscli/core/client.py</code> : <code>_parse_service</code> populate l'ensemble des
+  nouveaux champs depuis le payload API. Préserve la dérivation
+  <code>scheduled_downtime = depth &gt; 0</code> ET expose <code>scheduled_downtime_depth</code>.</li>
+<li><code>nagioscli/cli/commands/status.py</code> :</li>
+<li><code>_emit_service_json</code> : passe tous les champs (mapping explicite,
+    clés historiques inchangées).</li>
+<li><code>_emit_service_text</code> : ajoute <code>(soft|hard) attempt N/M</code> quand
+    <code>max_attempts &gt; 0</code>, et imprime <code>long_plugin_output</code> sur une 2e
+    ligne quand non vide (perfdata laissé hors texte court).</li>
+<li>Tests :</li>
+<li><code>tests/unit/test_client_getters.py</code> :
+    <code>test_parses_full_service_payload</code> — payload <code>mail2/DISK</code> complet,
+    asserts sur les 14+ nouveaux champs.</li>
+<li><code>tests/unit/test_cli_commands.py</code> :
+    <code>test_service_json_exposes_detail_fields</code> — vérifie présence des
+    9 champs DoD + non-régression des clés <code>output</code>/<code>status_text</code>/
+    <code>acknowledged</code>/<code>downtime</code>.
+    <code>test_service_text_shows_attempt_and_long_output</code> — la ligne
+    <code>soft attempt 3/6</code> et <code>long_plugin_output</code> apparaissent.</li>
+</ul>
+<h3>Comportements obtenus</h3>
+<ul>
+<li><code>nagioscli status service mail2 DISK --json</code> retourne désormais
+  29 clés (vs. 9 avant), permettant à <code>jq</code> / agent de récupérer
+  <code>perf_data</code>, l'attempt soft/hard, les timestamps complets sans ssh.</li>
+<li><code>nagioscli status service mail2 DISK</code> (texte) affiche
+  <code>Status: WARNING (hard attempt 6/6)</code> puis la ligne
+  <code>long_plugin_output</code> quand non vide.</li>
+<li>Pas de breaking change : les clés <code>host</code>, <code>service</code>, <code>status</code>,
+  <code>status_text</code>, <code>output</code>, <code>checks_enabled</code>, <code>notifications_enabled</code>,
+  <code>acknowledged</code>, <code>downtime</code> gardent exactement le même nom et la
+  même sémantique.</li>
+</ul>
+<h3>Garde-fous</h3>
+<ul>
+<li><code>pdm run lint</code> : All checks passed.</li>
+<li><code>pdm run typecheck</code> : Success, no issues found in 21 source files
+  (mypy strict, <code>disallow_untyped_defs</code>).</li>
+<li><code>pdm run test-quick</code> : 153 tests OK (3 nouveaux).</li>
+<li>Couverture maintenue ≥ 80 % (gate <code>test-cov-xml --cov-fail-under=80</code>).</li>
+<li>Aucun ajout de dépendance runtime ; toujours stdlib <code>urllib</code>.</li>
+</ul>
+<p>Version publiée : voir CHANGELOG / PyPI (bump effectué par <code>publish.sh</code>).</p></div><div class="wiki-nav"><a href="index.html">← retour à cli/commands</a> · <a href="../../log.html">voir log</a></div></div></main></div></body></html>

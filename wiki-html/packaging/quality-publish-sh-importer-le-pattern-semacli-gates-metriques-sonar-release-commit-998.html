@@ -1,0 +1,86 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>#998 — QUALITY / publish.sh — importer le pattern semacli (gates metriques + sonar + release commit) — kenboard wiki</title><style>body{margin:0;font-family:system-ui,sans-serif;color:#222;background:#fff}
+.layout{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+nav.sidebar{background:#f6f8fa;border-right:1px solid #d0d7de;padding:16px;
+  overflow-y:auto;font-size:13px}
+nav.sidebar h1{font-size:14px;text-transform:uppercase;color:#57606a;margin:0 0 12px}
+nav.sidebar ul{list-style:none;padding:0;margin:0}
+nav.sidebar li{margin:2px 0}
+nav.sidebar a{color:#0969da;text-decoration:none}
+nav.sidebar a:hover{text-decoration:underline}
+nav.sidebar a.current{font-weight:600;color:#1a1a1a}
+main{padding:24px 32px;max-width:900px}
+main h1{margin-top:0}
+main code{background:#f6f8fa;padding:1px 4px;border-radius:3px;font-size:90%}
+main pre{background:#f6f8fa;padding:12px;border-radius:6px;overflow-x:auto}
+main pre code{background:transparent;padding:0}
+main a{color:#0969da}
+/* Task detail (#376f — mirrors templates/modals/task_fullscreen.html) */
+.fullscreen-card{background:#fff;border:1px solid #d0d7de;border-radius:10px;
+  padding:32px 36px;max-width:760px}
+.fullscreen-header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.fullscreen-id{font-size:12px;color:#57606a;font-weight:600}
+.fullscreen-status{font-size:11px;text-transform:uppercase;letter-spacing:.5px;
+  color:#57606a;background:#f6f8fa;padding:3px 8px;border-radius:10px}
+.fullscreen-status.status-todo{background:#ddf4ff;color:#0969da}
+.fullscreen-status.status-doing{background:#fff8c5;color:#9a6700}
+.fullscreen-status.status-review{background:#dafbe1;color:#1a7f37}
+.fullscreen-status.status-done{background:#eaeef2;color:#57606a}
+.fullscreen-title{font-size:22px;font-weight:700;margin:0 0 16px;line-height:1.3}
+.fullscreen-meta{display:flex;align-items:center;gap:10px;margin-bottom:20px;
+  font-size:13px;color:#57606a}
+.task-avatar{width:28px;height:28px;border-radius:50%;display:flex;
+  align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px}
+.fs-who{font-weight:600;color:#222}
+.fullscreen-desc{font-size:14px;line-height:1.7;border-top:1px solid #d0d7de;
+  padding-top:16px}
+.fullscreen-desc h1,.fullscreen-desc h2,.fullscreen-desc h3{margin-top:16px;
+  margin-bottom:8px}
+.fullscreen-desc pre{background:#f6f8fa;border-radius:4px;padding:12px;
+  overflow-x:auto;font-size:12px}
+.fullscreen-desc code{background:#f6f8fa;border-radius:3px;padding:1px 4px;font-size:12px}
+.fullscreen-desc pre code{background:transparent;padding:0}
+.fullscreen-desc ul,.fullscreen-desc ol{padding-left:20px}
+.wiki-nav{margin-top:20px;padding-top:12px;border-top:1px solid #d0d7de;
+  font-size:13px;color:#57606a}
+.wiki-nav a{color:#0969da}
+</style></head><body><div class="layout"><nav class="sidebar"><h1>kenboard wiki</h1><ul><li><a href="index.html">Home</a></li><li style="padding-left:0px"><a href="../cli/index.html">CLI layer</a></li><li style="padding-left:12px"><a href="../cli/commands/index.html">CLI commands</a></li><li style="padding-left:0px"><a href="../core/index.html">Core</a></li><li style="padding-left:12px"><a href="../core/models/index.html">Core / models</a></li><li style="padding-left:12px"><a href="../core/client/index.html">Core / client</a></li><li style="padding-left:0px"><a href="../services/index.html">Services</a></li><li style="padding-left:0px"><a href="../tests/index.html">Tests</a></li><li style="padding-left:0px"><a href="../packaging/index.html" class="current">Packaging & tooling</a></li><li style="padding-left:0px"><a href="../docs/index.html">Documentation</a></li></ul></nav><main><div class="fullscreen-card"><div class="fullscreen-header"><span class="fullscreen-id">#998</span><span class="fullscreen-status status-done">done</span></div><h2 class="fullscreen-title">QUALITY / publish.sh — importer le pattern semacli (gates metriques + sonar + release commit)</h2><div class="fullscreen-meta"><div class="task-avatar" style="background:#0a3069">C</div><span class="fs-who">Claude</span><span>Classified 2026-07-28</span><span>by key:c6597e8c-4d84-44f1-821e-8f9ad6720cf6</span></div><div class="fullscreen-desc"><p>Comparer <code>/Users/q/Projects/2113.ch/semacli/publish.sh</code> au <code>publish.sh</code> de nagioscli et mettre le nôtre à niveau sur leur pattern, en important un maximum de qualité.</p>
+<p>Écarts identifiés (semacli → nagioscli) :</p>
+<ul>
+<li>Tests : semacli exécute la suite complète avec couverture (<code>pdm run test</code>) + tests d'intégration en replay strict ; nagioscli n'exécute que <code>test-quick</code>.</li>
+<li>Gate métriques bloquant (<code>scripts/quality_metrics.py</code> : plafonds absolus + ratchet best-ever contre <code>doc/quality-history.csv</code>).</li>
+<li>Gate SonarCloud (<code>scripts/sonar_gate.py</code> : push puis attente de l'analyse de HEAD, blocage sur le quality gate live).</li>
+<li>Wiki sync/build kenboard en mode non-fatal (<code>run_command_soft</code>) après le publish PyPI.</li>
+<li>Commit + push git final des artefacts de release (bump de version, wiki), non-fatal.</li>
+<li>Numérotation d'étapes cohérente (celle de semacli a dérivé : 1/13, 6/14, 9/16).</li>
+</ul>
+<p>À conserver côté nagioscli : l'étape lockfile (<code>pdm lock -G :all</code>) absente de semacli, et la règle « pas de requests/httpx en dépendance runtime » (sonar_gate.py de semacli est déjà urllib pur).</p>
+<hr />
+<h2>Résolution</h2>
+<p>Périmètre élargi en cours de tâche (demande utilisateur) : <code>kenboard/publish.sh</code> a aussi été comparé — c'est l'ancêtre du pattern et il porte plus de qualité que semacli ; le meilleur des deux a été importé.</p>
+<h3>Modifications</h3>
+<ul>
+<li>publish.sh : réécriture complète. De kenboard : flags <code>--quality</code> (chaîne qualité seule, sans bump ni publish), <code>--major|--minor|--patch</code>, <code>--help</code> ; compteur d'étapes auto-incrémenté (fin de la numérotation dérivante) ; <code>eval</code> dans run_command ; étapes explicites format/interrogate/vulture/refurb ; clean final. De semacli : suite complète avec couverture, metrics-gate, push + sonar-gate, wiki sync/build non-fatals APRÈS le publish PyPI, commit de release non-fatal. Conservé de nagioscli : lockfile sync (<code>pdm lock -G :all</code>). Ajouté : tag <code>v&lt;version&gt;</code> + <code>git push --tags</code> (schéma des tags existants). Pipeline : 15 étapes en <code>--quality</code>, 24 en publish.</li>
+<li>scripts/quality_metrics.py : port du harnais semacli (ken semacli #828). SRC=nagioscli, <code>DEBT_SELECT=ANN401,BLE,DTZ,EM,FBT,PLR,PTH,TRY</code>, palier 1 calibré sur la baseline mesurée (voir Garde-fous). Branché dans <code>pdm run check</code> et publish.sh.</li>
+<li>scripts/sonar_gate.py : port de la version kenboard (ken kenboard #835/#995 — timeout souple + prolongation si CI GitHub ou file compute-engine active + cap dur <code>--max-wait 3600</code>). PROJECT_KEY=lduchosal_nagioscli ; SONAR_TOKEN rendu optionnel (projet public, APIs analyses/gate/issues répondent en anonyme — vérifié en live).</li>
+<li>pyproject.toml : deps dev + <code>import-linter</code>, <code>vulture</code>, <code>refurb</code> ; scripts <code>arch</code>, <code>vulture</code>, <code>refurb</code>, <code>metrics</code>, <code>metrics-record</code>, <code>metrics-gate</code>, <code>sonar-gate</code> ; ruff : verrouillage des familles déjà à zéro (<code>G,SLF,PLC0415,ARG,PERF,RUF</code>) avec tests exemptés (per-file-ignores) ; contrats import-linter (couches cli→services→core, commandes indépendantes — les deux KEPT du premier coup) ; <code>[tool.vulture]</code> ; <code>[tool.coverage.run] omit=__main__.py</code> (shim jamais importé, écrasait min_file_cov à 0) ; interrogate fail-under 0→92 ; <strong>fix</strong> : <code>check</code> était une liste nue (pdm l'interprétait comme une commande+args, « format-check does not exist », exit 0 silencieux) → forme <code>{composite = [...]}</code>.</li>
+<li>doc/code-quality.md : politique qualité adaptée (critères, baseline 2026-07-28 v0.1.25, paliers 1→4, procédure de resserrage).</li>
+<li>doc/quality-history.csv : snapshot baseline enregistré (ratchet armé).</li>
+<li>vulture_whitelist.py : créé (vide — zéro faux positif à ce jour).</li>
+<li>nagioscli/ + tests : mise à zéro vulture/refurb — <code>login.py</code> (contextlib.suppress), <code>problems.py</code> (truthiness), <code>client.py</code> (dict |), <code>config.py</code> (pathlib, tue aussi 2 PTH), <code>conftest.py</code> (_args/_kwargs) ; reformatage <code>ruff format</code> (black --check toujours vert).</li>
+<li>CLAUDE.md : section Quality gate et Versioning mises à jour (<code>--quality</code>, flags de bump, interdiction de <code>gh release create</code> — python-publish.yml publie sur PyPI à la publication d'une release GitHub, doublon garanti).</li>
+</ul>
+<h3>Comportements obtenus</h3>
+<ul>
+<li><code>sh publish.sh --quality</code> : les 15 étapes qualité passent sans bump ni publication — le gate complet est enfin rejouable sans risque.</li>
+<li><code>pdm run check</code> exécute réellement ses 8 étapes (avant : no-op silencieux) et finit vert : lint (familles verrouillées), black, mypy strict, 2 contrats d'architecture KEPT, vulture 0, refurb 0, 160 tests, metrics-gate PASS palier 1.</li>
+<li><code>pdm run sonar-gate</code> : trouve l'analyse de HEAD en anonyme et valide le gate live (testé : PASSED sur cb5b1d8).</li>
+<li>Baseline mesurée : loc 1932, max_file 588 (core/client.py, chantier palier 2), ruff_debt 100, ignored_debt 4, mypy/vulture/refurb 0, docstrings 92.3 %, couverture 93.5 %, min_file 72.2 %.</li>
+</ul>
+<h3>Garde-fous</h3>
+<ul>
+<li>sh publish.sh --quality : 15/15 vert (inclut lint, typecheck, arch, interrogate, vulture, refurb, suite complète, metrics-gate).</li>
+<li>pdm run check : vert (composite réparé).</li>
+<li>pdm run metrics-gate : PASS palier 1 ; ratchet armé par doc/quality-history.csv.</li>
+<li>pdm run sonar-gate : PASSED en live, accès anonyme.</li>
+<li>Non importé, volontairement : <code>gh release create</code> (doublon PyPI via python-publish.yml), <code>pdm update</code> auto pendant le publish (un publish ne change pas silencieusement les versions verrouillées — <code>pdm outdated</code> en étape soft à la place), étape VCR replay (aucune cassette : tests/integration ne contient qu'un <strong>init</strong>.py), flag <code>--ci</code> (publish.sh n'est pas appelé par la CI ici).</li>
+</ul></div><div class="wiki-nav"><a href="index.html">← retour à packaging</a> · <a href="../log.html">voir log</a></div></div></main></div></body></html>
