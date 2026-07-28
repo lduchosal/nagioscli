@@ -31,9 +31,7 @@ def register_ack_commands(main_group: Any) -> None:
             cfg = load_config(config)
             client = NagiosClient(cfg, verbose=verbose)
 
-            OutputFormatter.format_verbose(
-                f"Acknowledging {hostname}/{service}", verbose
-            )
+            OutputFormatter.format_verbose(f"Acknowledging {hostname}/{service}", verbose)
 
             success = client.acknowledge_service(hostname, service, comment)
 

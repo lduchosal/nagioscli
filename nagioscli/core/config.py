@@ -42,7 +42,7 @@ def load_config(config_path: str = "nagioscli.ini") -> NagiosConfig:
 
     config_file = _find_config_file(config_path)
 
-    if not config_file or not os.path.exists(config_file):
+    if not config_file or not Path(config_file).exists():
         raise ConfigurationError(f"Configuration file not found: {config_path}")
 
     config.read(config_file)
@@ -59,7 +59,7 @@ def _find_config_file(config_path: str) -> str | None:
     3. User home directory (~/.nagioscli.ini)
     4. /usr/local/etc/nagioscli.ini
     """
-    if os.path.isabs(config_path):
+    if Path(config_path).is_absolute():
         return config_path
 
     # Current directory

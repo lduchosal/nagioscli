@@ -61,7 +61,7 @@ def register_problems_commands(main_group: Any) -> None:
             if output_json:
                 _emit_problems_json(services)
             elif quiet:
-                sys.exit(0 if len(services) == 0 else 1)
+                sys.exit(1 if services else 0)
             else:
                 _emit_problems_text(services)
 

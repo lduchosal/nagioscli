@@ -31,9 +31,7 @@ def register_check_commands(main_group: Any) -> None:
             cfg = load_config(config)
             client = NagiosClient(cfg, verbose=verbose)
 
-            OutputFormatter.format_verbose(
-                f"Forcing check for {hostname}/{service}", verbose
-            )
+            OutputFormatter.format_verbose(f"Forcing check for {hostname}/{service}", verbose)
 
             success = client.force_service_check(hostname, service)
 
@@ -153,9 +151,7 @@ def register_check_commands(main_group: Any) -> None:
             if success:
                 click.echo(f"Force check of all services submitted for host {hostname}")
             else:
-                click.echo(
-                    f"Failed to submit force check of all services for host {hostname}"
-                )
+                click.echo(f"Failed to submit force check of all services for host {hostname}")
 
         except Exception as e:
             handle_error(e, verbose)

@@ -52,7 +52,9 @@ def _emit_service_text(svc: Service) -> None:
     click.echo(f"Service: {svc.description}")
     state = "hard" if svc.state_type == 1 else "soft"
     if svc.max_attempts:
-        click.echo(f"Status: {svc.status_text} ({state} attempt {svc.current_attempt}/{svc.max_attempts})")
+        click.echo(
+            f"Status: {svc.status_text} ({state} attempt {svc.current_attempt}/{svc.max_attempts})"
+        )
     else:
         click.echo(f"Status: {svc.status_text}")
     click.echo(f"Output: {svc.plugin_output}")
@@ -116,9 +118,7 @@ def register_status_commands(main_group: Any) -> None:
             cfg = load_config(config)
             client = NagiosClient(cfg, verbose=verbose)
 
-            OutputFormatter.format_verbose(
-                f"Querying service {hostname}/{service}", verbose
-            )
+            OutputFormatter.format_verbose(f"Querying service {hostname}/{service}", verbose)
 
             svc = client.get_service_status(hostname, service)
 

@@ -24,9 +24,7 @@ from nagioscli.core.models import Host, Service
 
 
 def _svc(host: str = "web01", desc: str = "HTTP", status: int = 2, **extra: object) -> Service:
-    return Service(
-        host_name=host, description=desc, status=status, plugin_output="OK", **extra
-    )
+    return Service(host_name=host, description=desc, status=status, plugin_output="OK", **extra)
 
 
 def _host(name: str = "web01", status: int = 2, **extra: object) -> Host:
@@ -58,9 +56,7 @@ class TestProblems:
         assert result.exit_code == 0
         assert "No problems found" in result.output
 
-    def test_json_output(
-        self, runner: CliRunner, cli: object, mock_client: MagicMock
-    ) -> None:
+    def test_json_output(self, runner: CliRunner, cli: object, mock_client: MagicMock) -> None:
         mock_client.get_problems.return_value = [_svc(status=16)]
         result = runner.invoke(cli, ["problems", "--json"])
         assert result.exit_code == 0
@@ -96,9 +92,7 @@ class TestProblems:
 
 
 class TestStatus:
-    def test_service_text(
-        self, runner: CliRunner, cli: object, mock_client: MagicMock
-    ) -> None:
+    def test_service_text(self, runner: CliRunner, cli: object, mock_client: MagicMock) -> None:
         mock_client.get_service_status.return_value = _svc(
             status=16, problem_acknowledged=True, scheduled_downtime=True
         )
@@ -109,9 +103,7 @@ class TestStatus:
         assert "Acknowledged: Yes" in result.output
         assert "Downtime: Yes" in result.output
 
-    def test_service_json(
-        self, runner: CliRunner, cli: object, mock_client: MagicMock
-    ) -> None:
+    def test_service_json(self, runner: CliRunner, cli: object, mock_client: MagicMock) -> None:
         mock_client.get_service_status.return_value = _svc(status=4)
         result = runner.invoke(cli, ["status", "service", "web01", "HTTP", "--json"])
         assert result.exit_code == 0
@@ -180,9 +172,7 @@ class TestStatus:
         assert "soft attempt 3/6" in result.output
         assert "critical: zroot/backup" in result.output
 
-    def test_service_quiet(
-        self, runner: CliRunner, cli: object, mock_client: MagicMock
-    ) -> None:
+    def test_service_quiet(self, runner: CliRunner, cli: object, mock_client: MagicMock) -> None:
         mock_client.get_service_status.return_value = _svc(status=2)
         result = runner.invoke(cli, ["status", "service", "web01", "HTTP", "--quiet"])
         assert result.exit_code == 0
@@ -195,9 +185,7 @@ class TestStatus:
         result = runner.invoke(cli, ["status", "service", "web01", "HTTP"])
         assert result.exit_code == 5
 
-    def test_host_text(
-        self, runner: CliRunner, cli: object, mock_client: MagicMock
-    ) -> None:
+    def test_host_text(self, runner: CliRunner, cli: object, mock_client: MagicMock) -> None:
         mock_client.get_host_status.return_value = _host(
             status=4, problem_acknowledged=True, scheduled_downtime=True
         )
@@ -207,18 +195,14 @@ class TestStatus:
         assert "Acknowledged: Yes" in result.output
         assert "Downtime: Yes" in result.output
 
-    def test_host_json(
-        self, runner: CliRunner, cli: object, mock_client: MagicMock
-    ) -> None:
+    def test_host_json(self, runner: CliRunner, cli: object, mock_client: MagicMock) -> None:
         mock_client.get_host_status.return_value = _host(status=2)
         result = runner.invoke(cli, ["status", "host", "web01", "--json"])
         assert result.exit_code == 0
         payload = json.loads(result.output)
         assert payload["status_text"] == "UP"
 
-    def test_host_quiet(
-        self, runner: CliRunner, cli: object, mock_client: MagicMock
-    ) -> None:
+    def test_host_quiet(self, runner: CliRunner, cli: object, mock_client: MagicMock) -> None:
         mock_client.get_host_status.return_value = _host(status=8)
         result = runner.invoke(cli, ["status", "host", "web01", "--quiet"])
         assert result.exit_code == 0
@@ -284,9 +268,7 @@ class TestCheck:
         assert result.exit_code == 0
         assert "Failed to submit" in result.output
 
-    def test_check_api_error(
-        self, runner: CliRunner, cli: object, mock_client: MagicMock
-    ) -> None:
+    def test_check_api_error(self, runner: CliRunner, cli: object, mock_client: MagicMock) -> None:
         mock_client.force_service_check.side_effect = NagiosAPIError("nope")
         result = runner.invoke(cli, ["check", "web01", "HTTP"])
         assert result.exit_code == 4
@@ -328,9 +310,7 @@ class TestCheckProblems:
         assert "MySQL" not in result.output
         assert "Submitted 2/2 force check(s)" in result.output
 
-    def test_no_problems(
-        self, runner: CliRunner, cli: object, mock_client: MagicMock
-    ) -> None:
+    def test_no_problems(self, runner: CliRunner, cli: object, mock_client: MagicMock) -> None:
         mock_client.get_problems.return_value = []
         result = runner.invoke(cli, ["check-problems"])
         assert result.exit_code == 0
@@ -401,17 +381,13 @@ class TestAck:
         result = runner.invoke(cli, ["ack", "web01", "HTTP", "x"])
         assert "Failed" in result.output
 
-    def test_ack_host_success(
-        self, runner: CliRunner, cli: object, mock_client: MagicMock
-    ) -> None:
+    def test_ack_host_success(self, runner: CliRunner, cli: object, mock_client: MagicMock) -> None:
         mock_client.acknowledge_host.return_value = True
         result = runner.invoke(cli, ["ack-host", "web01", "rebooting"])
         assert result.exit_code == 0
         assert "Acknowledged host web01" in result.output
 
-    def test_ack_host_failure(
-        self, runner: CliRunner, cli: object, mock_client: MagicMock
-    ) -> None:
+    def test_ack_host_failure(self, runner: CliRunner, cli: object, mock_client: MagicMock) -> None:
         mock_client.acknowledge_host.return_value = False
         result = runner.invoke(cli, ["ack-host", "web01", "x"])
         assert "Failed" in result.output
@@ -429,9 +405,7 @@ class TestAck:
 
 
 class TestHosts:
-    def test_text(
-        self, runner: CliRunner, cli: object, mock_client: MagicMock
-    ) -> None:
+    def test_text(self, runner: CliRunner, cli: object, mock_client: MagicMock) -> None:
         mock_client.get_all_hosts.return_value = [_host("a", 2), _host("b", 4)]
         result = runner.invoke(cli, ["hosts"])
         assert result.exit_code == 0
@@ -439,26 +413,20 @@ class TestHosts:
         assert "DOWN" in result.output
         assert "Total: 2 host(s)" in result.output
 
-    def test_json(
-        self, runner: CliRunner, cli: object, mock_client: MagicMock
-    ) -> None:
+    def test_json(self, runner: CliRunner, cli: object, mock_client: MagicMock) -> None:
         mock_client.get_all_hosts.return_value = [_host("a", 2)]
         result = runner.invoke(cli, ["hosts", "--json"])
         assert result.exit_code == 0
         payload = json.loads(result.output)
         assert payload == [{"host": "a", "status": 2, "status_text": "UP"}]
 
-    def test_quiet(
-        self, runner: CliRunner, cli: object, mock_client: MagicMock
-    ) -> None:
+    def test_quiet(self, runner: CliRunner, cli: object, mock_client: MagicMock) -> None:
         mock_client.get_all_hosts.return_value = [_host("a"), _host("b")]
         result = runner.invoke(cli, ["hosts", "--quiet"])
         assert result.exit_code == 0
         assert result.output.split() == ["a", "b"]
 
-    def test_config_error(
-        self, runner: CliRunner, cli: object, mock_client: MagicMock
-    ) -> None:
+    def test_config_error(self, runner: CliRunner, cli: object, mock_client: MagicMock) -> None:
         mock_client.get_all_hosts.side_effect = ConfigurationError("missing")
         result = runner.invoke(cli, ["hosts"])
         assert result.exit_code == 2
@@ -468,9 +436,7 @@ class TestHosts:
 
 
 class TestServices:
-    def test_text(
-        self, runner: CliRunner, cli: object, mock_client: MagicMock
-    ) -> None:
+    def test_text(self, runner: CliRunner, cli: object, mock_client: MagicMock) -> None:
         mock_client.get_host_services.return_value = [_svc(desc="HTTP", status=2)]
         result = runner.invoke(cli, ["services", "web01"])
         assert result.exit_code == 0
@@ -478,18 +444,14 @@ class TestServices:
         assert "HTTP" in result.output
         assert "Total: 1 service(s)" in result.output
 
-    def test_json(
-        self, runner: CliRunner, cli: object, mock_client: MagicMock
-    ) -> None:
+    def test_json(self, runner: CliRunner, cli: object, mock_client: MagicMock) -> None:
         mock_client.get_host_services.return_value = [_svc(desc="HTTP", status=4)]
         result = runner.invoke(cli, ["services", "web01", "--json"])
         assert result.exit_code == 0
         payload = json.loads(result.output)
         assert payload[0]["status_text"] == "WARNING"
 
-    def test_quiet(
-        self, runner: CliRunner, cli: object, mock_client: MagicMock
-    ) -> None:
+    def test_quiet(self, runner: CliRunner, cli: object, mock_client: MagicMock) -> None:
         mock_client.get_host_services.return_value = [_svc(desc="HTTP"), _svc(desc="SSH")]
         result = runner.invoke(cli, ["services", "web01", "--quiet"])
         assert result.exit_code == 0

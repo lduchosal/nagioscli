@@ -80,7 +80,9 @@ class TestCsrfPreflight:
                 ),
                 set_cookies=["NagFormId=COOKIE-42; Path=/nagios"],
             ),
-            _make_response(body="<p>Your command request was successfully submitted to Nagios for processing.</p>"),
+            _make_response(
+                body="<p>Your command request was successfully submitted to Nagios for processing.</p>"
+            ),
         ]
         client = _client_with_opener(opener)
 
@@ -219,7 +221,9 @@ class TestStartTimeFormat:
             ("%Y-%m-%d %H:%M:%S", lambda s: s[4] == "-" and s[7] == "-"),  # ISO
         ],
     )
-    def test_start_time_format_round_trips_into_post(self, fmt: str, sample_char_check: Any) -> None:
+    def test_start_time_format_round_trips_into_post(
+        self, fmt: str, sample_char_check: Any
+    ) -> None:
         opener = MagicMock()
         opener.open.side_effect = [
             _make_response(

@@ -17,9 +17,7 @@ from nagioscli.core.exceptions import AuthenticationError
 
 
 @pytest.fixture
-def isolated_token_cache(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> Path:
+def isolated_token_cache(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
     """Redirect TOKEN_CACHE_FILE to a tmp path for the duration of the test."""
     fake = tmp_path / "token"
     monkeypatch.setattr(auth_mod, "TOKEN_CACHE_FILE", fake)
@@ -42,9 +40,7 @@ class TestGetCredentials:
         cfg = NagiosConfig(url="x", username="u", vouch_cookie="abc")
         assert get_credentials(cfg) == ("u", "")
 
-    def test_cached_vouch_token_returns_empty_password(
-        self, isolated_token_cache: Path
-    ) -> None:
+    def test_cached_vouch_token_returns_empty_password(self, isolated_token_cache: Path) -> None:
         isolated_token_cache.write_text("tok")
         cfg = NagiosConfig(url="x", username="u")
         assert get_credentials(cfg) == ("u", "")
@@ -88,6 +84,7 @@ class TestGetPasswordFromPass:
     def test_pass_not_installed_raises(self, monkeypatch: pytest.MonkeyPatch) -> None:
         def boom(*_a: object, **_kw: object) -> None:
             raise FileNotFoundError
+
         monkeypatch.setattr(subprocess, "run", boom)
         with pytest.raises(AuthenticationError, match="pass.* not found"):
             _get_password_from_pass("nagios/u")
@@ -95,6 +92,7 @@ class TestGetPasswordFromPass:
     def test_timeout_raises(self, monkeypatch: pytest.MonkeyPatch) -> None:
         def boom(*_a: object, **_kw: object) -> None:
             raise subprocess.TimeoutExpired(cmd="pass", timeout=10)
+
         monkeypatch.setattr(subprocess, "run", boom)
         with pytest.raises(AuthenticationError, match="Timeout"):
             _get_password_from_pass("nagios/u")
@@ -102,6 +100,7 @@ class TestGetPasswordFromPass:
     def test_unexpected_error_wrapped(self, monkeypatch: pytest.MonkeyPatch) -> None:
         def boom(*_a: object, **_kw: object) -> None:
             raise OSError("disk full")
+
         monkeypatch.setattr(subprocess, "run", boom)
         with pytest.raises(AuthenticationError, match="disk full"):
             _get_password_from_pass("nagios/u")

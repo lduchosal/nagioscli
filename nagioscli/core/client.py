@@ -55,8 +55,12 @@ class NagiosClient:
                 # Opt-in insecure mode: many Nagios installs use self-signed certs,
                 # so users can disable verification by setting verify_ssl=False.
                 ssl_context = ssl.create_default_context()
-                ssl_context.check_hostname = False  # NOSONAR: explicit user opt-in via verify_ssl=False
-                ssl_context.verify_mode = ssl.CERT_NONE  # NOSONAR: explicit user opt-in via verify_ssl=False
+                ssl_context.check_hostname = (
+                    False  # NOSONAR: explicit user opt-in via verify_ssl=False
+                )
+                ssl_context.verify_mode = (
+                    ssl.CERT_NONE
+                )  # NOSONAR: explicit user opt-in via verify_ssl=False
                 https_handler = urllib.request.HTTPSHandler(context=ssl_context)
                 handlers.append(https_handler)
 
@@ -137,7 +141,9 @@ class NagiosClient:
         except json.JSONDecodeError as e:
             raise NagiosAPIError(f"Invalid JSON response: {e}") from e
 
-    def _apply_auth(self, request: urllib.request.Request, extra_cookies: dict[str, str] | None = None) -> None:
+    def _apply_auth(
+        self, request: urllib.request.Request, extra_cookies: dict[str, str] | None = None
+    ) -> None:
         """Attach the configured auth header and any extra cookies to ``request``."""
         cookies: dict[str, str] = {}
         if extra_cookies:
@@ -193,8 +199,10 @@ class NagiosClient:
         token = token_match.group(1) if token_match else ""
 
         if self.verbose >= 3:
-            print(f"DEBUG: CSRF cookie={'<got>' if cookie_value else '<missing>'} "
-                  f"token={'<got>' if token else '<missing>'}")
+            print(
+                f"DEBUG: CSRF cookie={'<got>' if cookie_value else '<missing>'} "
+                f"token={'<got>' if token else '<missing>'}"
+            )
 
         return cookie_value, token
 
@@ -245,7 +253,7 @@ class NagiosClient:
         nagFormId field, then POSTs with both attached.
         """
         cookie_value, token = self._csrf_preflight(preflight_params)
-        data_with_token = {**data, "nagFormId": token}
+        data_with_token = data | {"nagFormId": token}
         return self._post("cmd.cgi", data_with_token, csrf_cookie=cookie_value)
 
     def get_service_status(self, hostname: str, service: str) -> Service:

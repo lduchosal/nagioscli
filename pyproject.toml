@@ -41,6 +41,9 @@ dev = [
     "pdm>=2.0.0",
     "pdm-bump",
     "interrogate>=1.7.0",
+    "import-linter>=2.11",
+    "vulture>=2.14",
+    "refurb>=2.2.0",
 ]
 publish = [
     "twine>=6.2.0",
@@ -76,6 +79,11 @@ warn_unreachable = true
 strict_equality = true
 ignore_missing_imports = true
 
+[tool.coverage.run]
+# The `python -m nagioscli` shim is never imported by tests; without this
+# omit it pins min_file_cov (metrics gate) to 0.
+omit = ["nagioscli/__main__.py"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = "test_*.py"
@@ -103,11 +111,22 @@ test-unit = "env PYTHONPATH=src python -m pytest tests/unit/ -v"
 test-integration = "env PYTHONPATH=src python -m pytest tests/integration/ -v"
 test-cov = "env PYTHONPATH=src python -m pytest tests/ -v --cov=nagioscli --cov-report=html --cov-report=term-missing"
 lint = "ruff check nagioscli/ tests/"
+arch = "lint-imports"
 lint-fix = "ruff check --fix nagioscli/ tests/"
 format-check = "black --check nagioscli/ tests/"
 interrogate = "interrogate nagioscli/"
+vulture = "vulture"
+refurb = "refurb nagioscli/"
+# Quality metrics snapshot & blocking gate (pattern semacli ken #828) —
+# see doc/code-quality.md
+metrics = "python scripts/quality_metrics.py"
+metrics-record = "python scripts/quality_metrics.py --record"
+metrics-gate = "python scripts/quality_metrics.py --gate"
+# SonarCloud gate (pattern kenboard ken #835/#995) — polls the analysis of
+# HEAD then blocks on the live quality gate. Publish-only (needs a pushed HEAD).
+sonar-gate = "python scripts/sonar_gate.py --timeout 900 --interval 20 --max-wait 3600"
 test-cov-xml = "env PYTHONPATH=src python -m pytest tests/ --cov=nagioscli --cov-report=xml --cov-report=term --cov-fail-under=80"
-check = ["lint", "format-check", "typecheck", "test"]
+check = {composite = ["lint", "format-check", "typecheck", "arch", "vulture", "refurb", "test", "metrics-gate"]}
 clean = "rm -rf .coverage htmlcov/ .pytest_cache/ __pycache__/ nagioscli/__pycache__/"
 version-patch = "pdm bump patch"
 version-minor = "pdm bump minor"
@@ -123,11 +142,56 @@ line-length = 100
 target-version = "py310"
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I", "UP", "B", "C4"]
+# Quality-gate locks (pattern semacli/kenboard, doc/code-quality.md): each
+# debt family that reaches zero in nagioscli/ is added here so the acquis
+# becomes a lint error, and removed from DEBT_SELECT in
+# scripts/quality_metrics.py. Locked at palier 1: G, SLF, PLC0415, ARG,
+# PERF, RUF (already at zero at baseline).
+select = [
+    "E", "F", "W", "I", "UP", "B", "C4",
+    "G", "SLF", "PLC0415",
+    "ARG", "PERF", "RUF",
+]
+# E501: black owns line length.
 ignore = ["E501"]
 
+[tool.ruff.lint.per-file-ignores]
+# Tests are exempt from the src-hygiene families (same as semacli/kenboard):
+# private access and lazy imports are legitimate test idioms. The metrics
+# gate only measures nagioscli/.
+"tests/**" = ["DTZ", "G", "SLF", "PLC0415", "ARG", "PERF", "PTH", "RUF", "BLE", "EM", "FBT", "TRY", "ANN401", "PLR"]
+
+[tool.importlinter]
+root_package = "nagioscli"
+
+[[tool.importlinter.contracts]]
+name = "cli imports services imports core, never the reverse"
+type = "layers"
+layers = ["nagioscli.cli", "nagioscli.services", "nagioscli.core"]
+
+[[tool.importlinter.contracts]]
+name = "command modules stay independent of each other"
+type = "independence"
+modules = [
+    "nagioscli.cli.commands.ack",
+    "nagioscli.cli.commands.check",
+    "nagioscli.cli.commands.hosts",
+    "nagioscli.cli.commands.login",
+    "nagioscli.cli.commands.problems",
+    "nagioscli.cli.commands.self_update",
+    "nagioscli.cli.commands.services",
+    "nagioscli.cli.commands.status",
+]
+
+[tool.vulture]
+# Quality gate (doc/code-quality.md): dead-code findings are blocking.
+min_confidence = 80
+paths = ["nagioscli", "tests", "vulture_whitelist.py"]
+
 [tool.interrogate]
-fail-under = 0
+# Current palier of the quality gate (doc/code-quality.md) — tightened at
+# each palier, never relaxed without a traced human decision.
+fail-under = 92
 ignore-init-method = true
 ignore-init-module = true
 exclude = ["tests", "docs", "build", "dist"]

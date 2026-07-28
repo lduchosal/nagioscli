@@ -95,17 +95,21 @@ class TestRequestErrors:
 class TestGetServiceStatus:
     def test_parses_service(self) -> None:
         client, opener = _client()
-        opener.open.return_value = _json_response({
-            "result": {"type_code": 0},
-            "data": {"service": {
-                "host_name": "web01",
-                "description": "HTTP",
-                "status": 2,
-                "plugin_output": "OK",
-                "problem_has_been_acknowledged": True,
-                "scheduled_downtime_depth": 1,
-            }},
-        })
+        opener.open.return_value = _json_response(
+            {
+                "result": {"type_code": 0},
+                "data": {
+                    "service": {
+                        "host_name": "web01",
+                        "description": "HTTP",
+                        "status": 2,
+                        "plugin_output": "OK",
+                        "problem_has_been_acknowledged": True,
+                        "scheduled_downtime_depth": 1,
+                    }
+                },
+            }
+        )
         svc = client.get_service_status("web01", "HTTP")
         assert svc.host_name == "web01"
         assert svc.problem_acknowledged is True
@@ -113,34 +117,38 @@ class TestGetServiceStatus:
 
     def test_parses_full_service_payload(self) -> None:
         client, opener = _client()
-        opener.open.return_value = _json_response({
-            "result": {"type_code": 0},
-            "data": {"service": {
-                "host_name": "mail2",
-                "description": "DISK",
-                "status": 4,
-                "plugin_output": "DF CRITICAL - zroot/backup is 95.35 (outside range 0:95)",
-                "long_plugin_output": "critical: zroot/backup is 95.35 (outside range 0:95)\n",
-                "perf_data": "'zroot/backup'=95.35;93;95;0",
-                "current_attempt": 6,
-                "max_attempts": 6,
-                "state_type": 1,
-                "acknowledgement_type": 2,
-                "last_check": 1781010038000,
-                "next_check": 1781010638000,
-                "last_state_change": 1780990232000,
-                "last_hard_state_change": 1780990232000,
-                "last_time_ok": 1780558512000,
-                "last_time_warning": 1780990232000,
-                "last_time_critical": 1781010038000,
-                "last_time_unknown": 0,
-                "last_notification": 0,
-                "current_notification_number": 21,
-                "execution_time": 2.06,
-                "latency": 0.02,
-                "scheduled_downtime_depth": 0,
-            }},
-        })
+        opener.open.return_value = _json_response(
+            {
+                "result": {"type_code": 0},
+                "data": {
+                    "service": {
+                        "host_name": "mail2",
+                        "description": "DISK",
+                        "status": 4,
+                        "plugin_output": "DF CRITICAL - zroot/backup is 95.35 (outside range 0:95)",
+                        "long_plugin_output": "critical: zroot/backup is 95.35 (outside range 0:95)\n",
+                        "perf_data": "'zroot/backup'=95.35;93;95;0",
+                        "current_attempt": 6,
+                        "max_attempts": 6,
+                        "state_type": 1,
+                        "acknowledgement_type": 2,
+                        "last_check": 1781010038000,
+                        "next_check": 1781010638000,
+                        "last_state_change": 1780990232000,
+                        "last_hard_state_change": 1780990232000,
+                        "last_time_ok": 1780558512000,
+                        "last_time_warning": 1780990232000,
+                        "last_time_critical": 1781010038000,
+                        "last_time_unknown": 0,
+                        "last_notification": 0,
+                        "current_notification_number": 21,
+                        "execution_time": 2.06,
+                        "latency": 0.02,
+                        "scheduled_downtime_depth": 0,
+                    }
+                },
+            }
+        )
         svc = client.get_service_status("mail2", "DISK")
         assert svc.long_plugin_output.startswith("critical:")
         assert "zroot/backup" in svc.perf_data
@@ -160,19 +168,23 @@ class TestGetServiceStatus:
 
     def test_not_found_when_service_missing(self) -> None:
         client, opener = _client()
-        opener.open.return_value = _json_response({
-            "result": {"type_code": 0},
-            "data": {},
-        })
+        opener.open.return_value = _json_response(
+            {
+                "result": {"type_code": 0},
+                "data": {},
+            }
+        )
         with pytest.raises(NotFoundError):
             client.get_service_status("x", "y")
 
     def test_api_error_when_type_code_nonzero(self) -> None:
         client, opener = _client()
-        opener.open.return_value = _json_response({
-            "result": {"type_code": 1, "message": "bad query"},
-            "data": {},
-        })
+        opener.open.return_value = _json_response(
+            {
+                "result": {"type_code": 1, "message": "bad query"},
+                "data": {},
+            }
+        )
         with pytest.raises(NagiosAPIError, match="bad query"):
             client.get_service_status("x", "y")
 
@@ -180,19 +192,24 @@ class TestGetServiceStatus:
 class TestGetHostStatus:
     def test_parses_host(self) -> None:
         client, opener = _client()
-        opener.open.return_value = _json_response({
-            "result": {"type_code": 0},
-            "data": {"host": {"name": "web01", "address": "10.0.0.1", "status": 2}},
-        })
+        opener.open.return_value = _json_response(
+            {
+                "result": {"type_code": 0},
+                "data": {"host": {"name": "web01", "address": "10.0.0.1", "status": 2}},
+            }
+        )
         host = client.get_host_status("web01")
         assert host.name == "web01"
         assert host.address == "10.0.0.1"
 
     def test_not_found(self) -> None:
         client, opener = _client()
-        opener.open.return_value = _json_response({
-            "result": {"type_code": 0}, "data": {},
-        })
+        opener.open.return_value = _json_response(
+            {
+                "result": {"type_code": 0},
+                "data": {},
+            }
+        )
         with pytest.raises(NotFoundError):
             client.get_host_status("missing")
 
@@ -200,13 +217,17 @@ class TestGetHostStatus:
 class TestListGetters:
     def test_get_problems_flattens_servicelist(self) -> None:
         client, opener = _client()
-        opener.open.return_value = _json_response({
-            "result": {"type_code": 0},
-            "data": {"servicelist": {
-                "web01": {"HTTP": 16, "SSH": 4},
-                "db01": {"MySQL": 8},
-            }},
-        })
+        opener.open.return_value = _json_response(
+            {
+                "result": {"type_code": 0},
+                "data": {
+                    "servicelist": {
+                        "web01": {"HTTP": 16, "SSH": 4},
+                        "db01": {"MySQL": 8},
+                    }
+                },
+            }
+        )
         problems = client.get_problems()
         assert {(p.host_name, p.description, p.status) for p in problems} == {
             ("web01", "HTTP", 16),
@@ -216,35 +237,45 @@ class TestListGetters:
 
     def test_get_problems_api_error(self) -> None:
         client, opener = _client()
-        opener.open.return_value = _json_response({
-            "result": {"type_code": 1, "message": "denied"}, "data": {},
-        })
+        opener.open.return_value = _json_response(
+            {
+                "result": {"type_code": 1, "message": "denied"},
+                "data": {},
+            }
+        )
         with pytest.raises(NagiosAPIError, match="denied"):
             client.get_problems()
 
     def test_get_all_hosts(self) -> None:
         client, opener = _client()
-        opener.open.return_value = _json_response({
-            "result": {"type_code": 0},
-            "data": {"hostlist": {"web01": 2, "db01": 4}},
-        })
+        opener.open.return_value = _json_response(
+            {
+                "result": {"type_code": 0},
+                "data": {"hostlist": {"web01": 2, "db01": 4}},
+            }
+        )
         hosts = client.get_all_hosts()
         assert {(h.name, h.status) for h in hosts} == {("web01", 2), ("db01", 4)}
 
     def test_get_all_hosts_api_error(self) -> None:
         client, opener = _client()
-        opener.open.return_value = _json_response({
-            "result": {"type_code": 1, "message": "x"}, "data": {},
-        })
+        opener.open.return_value = _json_response(
+            {
+                "result": {"type_code": 1, "message": "x"},
+                "data": {},
+            }
+        )
         with pytest.raises(NagiosAPIError):
             client.get_all_hosts()
 
     def test_get_host_services(self) -> None:
         client, opener = _client()
-        opener.open.return_value = _json_response({
-            "result": {"type_code": 0},
-            "data": {"servicelist": {"web01": {"HTTP": 2, "SSH": 2}}},
-        })
+        opener.open.return_value = _json_response(
+            {
+                "result": {"type_code": 0},
+                "data": {"servicelist": {"web01": {"HTTP": 2, "SSH": 2}}},
+            }
+        )
         services = client.get_host_services("web01")
         assert {(s.host_name, s.description) for s in services} == {
             ("web01", "HTTP"),
@@ -253,9 +284,12 @@ class TestListGetters:
 
     def test_get_host_services_api_error(self) -> None:
         client, opener = _client()
-        opener.open.return_value = _json_response({
-            "result": {"type_code": 1, "message": "x"}, "data": {},
-        })
+        opener.open.return_value = _json_response(
+            {
+                "result": {"type_code": 1, "message": "x"},
+                "data": {},
+            }
+        )
         with pytest.raises(NagiosAPIError):
             client.get_host_services("web01")
 

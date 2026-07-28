@@ -1,5 +1,6 @@
 """Login command for CLI - manual Vouch cookie authentication."""
 
+from contextlib import suppress
 from typing import Any
 
 import click
@@ -51,7 +52,5 @@ def register_login_commands(main_group: Any) -> None:
 def _save_token(token: str) -> None:
     """Save token to cache file."""
     TOKEN_CACHE_FILE.write_text(token)
-    try:
+    with suppress(OSError):  # chmod may fail on Windows
         TOKEN_CACHE_FILE.chmod(0o600)
-    except OSError:
-        pass  # chmod may fail on Windows

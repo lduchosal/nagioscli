@@ -26,20 +26,25 @@ packages.
 
 ## Quality gate
 
-`./publish.sh` is the full quality gate. It runs, in order:
+`./publish.sh` is the full quality gate (pattern imported from
+semacli/kenboard, ken #998). Quality phase: clean, lockfile sync,
+install, outdated report, format (ruff), format-check (black), lint,
+arch (import-linter), typecheck, interrogate, vulture, refurb, full
+test suite with coverage, then the blocking metrics gate
+(`scripts/quality_metrics.py` — ceilings + best-ever ratchet vs
+`doc/quality-history.csv`, policy in `doc/code-quality.md`). Publish
+phase: git push + SonarCloud gate (`scripts/sonar_gate.py`), version
+bump, build, PyPI publish, wiki sync/build (non-fatal), release
+commit + `v<version>` tag + push (non-fatal).
 
-1. `pdm run clean`
-2. `pdm run install` + `install-dev`
-3. `pdm run lint`
-4. `pdm run typecheck`
-5. `pdm run test-quick`
-6. `pdm run version-patch` (bumps `nagioscli/__init__.py`)
-7. `pdm build`
-8. `pdm publish`
-
-So running it both validates and ships a patch release — don't invoke
-it casually. For local iteration without bumping/publishing, run the
-gate steps directly: `pdm run lint && pdm run typecheck && pdm run test-quick`.
+- `./publish.sh --quality` runs ONLY the quality phase — no bump, no
+  publish. Safe to run anytime; prefer it for validation.
+- A bare `./publish.sh` ships a release — don't invoke it casually.
+- `pdm run check` covers the same local gates (no sonar) for quick
+  composite runs; `pdm run lint && pdm run typecheck && pdm run test-quick`
+  remains the fastest iteration loop.
+- Never `gh release create` from scripts: `python-publish.yml` uploads
+  to PyPI on GitHub release publication and would double-publish.
 
 mypy is strict (`disallow_untyped_defs`, `warn_unreachable`, etc.) —
 type new defs fully.
@@ -47,9 +52,8 @@ type new defs fully.
 ## Versioning
 
 - Version lives in `nagioscli/__init__.py` (`__version__`).
-- `publish.sh` bumps it via `pdm run version-patch` on every run. For
-  minor/major bumps, run `pdm run version-minor` / `version-major`
-  before `publish.sh` (or edit the script for that release).
+- `publish.sh` bumps a patch by default; pass `--minor` / `--major`
+  for bigger bumps (`--quality` skips the bump entirely).
 
 ## Task tracking — kenboard `ken`
 

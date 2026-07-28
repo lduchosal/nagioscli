@@ -41,7 +41,7 @@ def mock_client(monkeypatch: pytest.MonkeyPatch, stub_config: NagiosConfig) -> I
     """
     client_instance = MagicMock()
 
-    def _make_client(*args: Any, **kwargs: Any) -> MagicMock:
+    def _make_client(*_args: Any, **_kwargs: Any) -> MagicMock:
         return client_instance
 
     for mod_path in _COMMAND_MODULES:

@@ -31,9 +31,7 @@ def register_services_commands(main_group: Any) -> None:
             cfg = load_config(config)
             client = NagiosClient(cfg, verbose=verbose)
 
-            OutputFormatter.format_verbose(
-                f"Querying services for {hostname}", verbose
-            )
+            OutputFormatter.format_verbose(f"Querying services for {hostname}", verbose)
 
             services = client.get_host_services(hostname)
 

@@ -1,6 +1,5 @@
 """Tests for models module."""
 
-
 from nagioscli.core.models import Host, HostStatus, Service, ServiceStatus
 
 
@@ -112,12 +111,8 @@ class TestServiceStatus:
         assert int(ServiceStatus.UNKNOWN) == 8
         assert int(ServiceStatus.CRITICAL) == 16
 
-        service_critical = Service(
-            host_name="h", description="s", status=16, plugin_output=""
-        )
-        service_unknown = Service(
-            host_name="h", description="s", status=8, plugin_output=""
-        )
+        service_critical = Service(host_name="h", description="s", status=16, plugin_output="")
+        service_unknown = Service(host_name="h", description="s", status=8, plugin_output="")
         assert service_critical.status_text == "CRITICAL"
         assert service_unknown.status_text == "UNKNOWN"
 
