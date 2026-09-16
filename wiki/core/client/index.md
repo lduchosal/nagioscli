@@ -4,6 +4,10 @@ HTTP client for Nagios statusjson.cgi and cmd.cgi endpoints.
 
 Section: `core/client`
 
+## En cours (1)
+
+- [NAGIOSCLI / Decodage UTF-8 strict - une sortie de plugin en cp1252 fait planter la commande entiere](nagioscli-decodage-utf-8-strict-une-sortie-de-plugin-en-cp1252-fait-planter-la-commande-entiere-1104.md) — _review_
+
 ## Archivé (3)
 
 - [NAGIOSCLI / Upstream bug — cmd.cgi commands fail (missing CSRF + wrong date format)](nagioscli-upstream-bug-cmd-cgi-commands-fail-missing-csrf-wrong-date-format-601.md)

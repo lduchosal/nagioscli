@@ -2,6 +2,7 @@
 
 Most recent first.
 
+- 2026-09-16T17:57:35 — task #1104 (NAGIOSCLI / Decodage UTF-8 strict - une sortie de plugin en cp1252 fait planter la commande entiere) → `core/client` (by key:c6597e8c-4d84-44f1-821e-8f9ad6720cf6)
 - 2026-07-28T08:56:56 — task #747 (CLI / nagioscli self-update command) → `cli/commands` (by key:c6597e8c-4d84-44f1-821e-8f9ad6720cf6)
 - 2026-07-28T08:56:55 — task #628 (QUALITY / Raise code coverage from 35% to 80%+) → `tests` (by key:c6597e8c-4d84-44f1-821e-8f9ad6720cf6)
 - 2026-07-28T08:56:54 — task #627 (QUALITY / Wire codecov, SonarCloud and interrogate badges) → `packaging` (by key:c6597e8c-4d84-44f1-821e-8f9ad6720cf6)
