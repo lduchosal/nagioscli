@@ -97,6 +97,7 @@ nagioscli/
 │   ├── config.py          # Configuration handling
 │   ├── auth.py            # Authentication
 │   ├── client.py          # Nagios HTTP client
+│   ├── encoding.py        # Tolerant response decoding
 │   ├── exceptions.py      # Custom exceptions
 │   └── models.py          # Data models
 ├── services/               # Business services

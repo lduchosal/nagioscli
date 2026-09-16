@@ -11,6 +11,7 @@ from typing import Any
 
 from .auth import get_credentials, load_cached_vouch_token
 from .config import NagiosConfig
+from .encoding import decode_body
 from .exceptions import NagiosAPIError, NotFoundError
 from .models import Host, Service
 
@@ -126,7 +127,7 @@ class NagiosClient:
 
         try:
             response = opener.open(request, timeout=self.config.timeout)
-            content = response.read().decode("utf-8")
+            content = decode_body(response.read())
 
             if self.verbose >= 3:
                 print(f"DEBUG: Response: {content[:500]}")
@@ -181,7 +182,7 @@ class NagiosClient:
 
         try:
             response = opener.open(request, timeout=self.config.timeout)
-            body = response.read().decode("utf-8", errors="replace")
+            body = decode_body(response.read())
         except urllib.error.HTTPError as e:
             raise NagiosAPIError(f"HTTP {e.code} on CSRF preflight: {e.reason}") from e
         except urllib.error.URLError as e:
@@ -234,7 +235,7 @@ class NagiosClient:
 
         try:
             response = opener.open(request, timeout=self.config.timeout)
-            content: str = response.read().decode("utf-8")
+            content = decode_body(response.read())
 
             if self.verbose >= 3:
                 print(f"DEBUG: Response: {content[:500]}")

@@ -50,6 +50,7 @@ nagioscli/
 │   ├── models.py           # section: core/models
 │   ├── config.py
 │   ├── auth.py
+│   ├── encoding.py
 │   └── exceptions.py
 └── services/               # section: services
 ```
