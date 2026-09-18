@@ -54,6 +54,24 @@ class TestService:
         assert service.status_text == "UNKNOWN"
         assert service.is_problem is True
 
+    def test_status_text_pending(self) -> None:
+        """A service awaiting its first check renders, and isn't a problem (ken #1109)."""
+        service = Service(
+            host_name="test.host",
+            description="TestService",
+            status=ServiceStatus.PENDING,
+            plugin_output="",
+        )
+
+        assert service.status_text == "PENDING"
+        assert service.is_problem is False
+
+    def test_status_text_unmapped_code_degrades(self) -> None:
+        """An unmapped code falls back instead of raising (ken #1109)."""
+        service = Service(host_name="h", description="s", status=99, plugin_output="")
+
+        assert service.status_text == "UNKNOWN(99)"
+
 
 class TestHost:
     """Tests for Host model."""
@@ -94,12 +112,31 @@ class TestHost:
         assert host.status_text == "UNREACHABLE"
         assert host.is_problem is True
 
+    def test_status_text_pending(self) -> None:
+        """A host awaiting its first check renders, and isn't a problem (ken #1109)."""
+        host = Host(
+            name="test.host",
+            address="192.168.1.1",
+            status=HostStatus.PENDING,
+            plugin_output="",
+        )
+
+        assert host.status_text == "PENDING"
+        assert host.is_problem is False
+
+    def test_status_text_unmapped_code_degrades(self) -> None:
+        """An unmapped code falls back instead of raising (ken #1109)."""
+        host = Host(name="h", address="", status=99, plugin_output="")
+
+        assert host.status_text == "UNKNOWN(99)"
+
 
 class TestServiceStatus:
     """Tests for ServiceStatus enum."""
 
     def test_status_values(self) -> None:
         """Test status enum values."""
+        assert ServiceStatus.PENDING == 1
         assert ServiceStatus.OK == 2
         assert ServiceStatus.WARNING == 4
         assert ServiceStatus.UNKNOWN == 8
@@ -122,6 +159,7 @@ class TestHostStatus:
 
     def test_status_values(self) -> None:
         """Test status enum values."""
+        assert HostStatus.PENDING == 1
         assert HostStatus.UP == 2
         assert HostStatus.DOWN == 4
         assert HostStatus.UNREACHABLE == 8

@@ -59,11 +59,11 @@ class OutputFormatter:
     @staticmethod
     def format_service_status(status: int) -> str:
         """Format service status as text."""
-        status_map = {2: "OK", 4: "WARNING", 8: "UNKNOWN", 16: "CRITICAL"}
+        status_map = {1: "PENDING", 2: "OK", 4: "WARNING", 8: "UNKNOWN", 16: "CRITICAL"}
         return status_map.get(status, f"UNKNOWN({status})")
 
     @staticmethod
     def format_host_status(status: int) -> str:
         """Format host status as text."""
-        status_map = {2: "UP", 4: "DOWN", 8: "UNREACHABLE"}
+        status_map = {1: "PENDING", 2: "UP", 4: "DOWN", 8: "UNREACHABLE"}
         return status_map.get(status, f"UNKNOWN({status})")

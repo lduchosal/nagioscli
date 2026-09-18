@@ -178,6 +178,26 @@ class TestStatus:
         assert result.exit_code == 0
         assert result.output.strip() == "OK"
 
+    def test_service_pending_renders(
+        self, runner: CliRunner, cli: object, mock_client: MagicMock
+    ) -> None:
+        # status=1 used to raise ValueError before any output (ken #1109).
+        mock_client.get_service_status.return_value = _svc(status=1)
+        result = runner.invoke(cli, ["status", "service", "web01", "HTTP"])
+        assert result.exit_code == 0
+        assert "Status: PENDING" in result.output
+
+    def test_service_pending_json_and_quiet(
+        self, runner: CliRunner, cli: object, mock_client: MagicMock
+    ) -> None:
+        mock_client.get_service_status.return_value = _svc(status=1)
+        as_json = runner.invoke(cli, ["status", "service", "web01", "HTTP", "--json"])
+        quiet = runner.invoke(cli, ["status", "service", "web01", "HTTP", "--quiet"])
+        assert as_json.exit_code == 0
+        assert json.loads(as_json.output)["status_text"] == "PENDING"
+        assert quiet.exit_code == 0
+        assert quiet.output.strip() == "PENDING"
+
     def test_service_not_found_maps_to_exit_5(
         self, runner: CliRunner, cli: object, mock_client: MagicMock
     ) -> None:
@@ -207,6 +227,14 @@ class TestStatus:
         result = runner.invoke(cli, ["status", "host", "web01", "--quiet"])
         assert result.exit_code == 0
         assert result.output.strip() == "UNREACHABLE"
+
+    def test_host_pending_renders(
+        self, runner: CliRunner, cli: object, mock_client: MagicMock
+    ) -> None:
+        mock_client.get_host_status.return_value = _host(status=1)
+        result = runner.invoke(cli, ["status", "host", "web01"])
+        assert result.exit_code == 0
+        assert "Status: PENDING" in result.output
 
     def test_host_auth_error_maps_to_exit_3(
         self, runner: CliRunner, cli: object, mock_client: MagicMock

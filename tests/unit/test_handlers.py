@@ -51,14 +51,21 @@ class TestOutputFormatter:
 
     @pytest.mark.parametrize(
         "code,text",
-        [(2, "OK"), (4, "WARNING"), (8, "UNKNOWN"), (16, "CRITICAL"), (99, "UNKNOWN(99)")],
+        [
+            (1, "PENDING"),
+            (2, "OK"),
+            (4, "WARNING"),
+            (8, "UNKNOWN"),
+            (16, "CRITICAL"),
+            (99, "UNKNOWN(99)"),
+        ],
     )
     def test_format_service_status(self, code: int, text: str) -> None:
         assert OutputFormatter.format_service_status(code) == text
 
     @pytest.mark.parametrize(
         "code,text",
-        [(2, "UP"), (4, "DOWN"), (8, "UNREACHABLE"), (99, "UNKNOWN(99)")],
+        [(1, "PENDING"), (2, "UP"), (4, "DOWN"), (8, "UNREACHABLE"), (99, "UNKNOWN(99)")],
     )
     def test_format_host_status(self, code: int, text: str) -> None:
         assert OutputFormatter.format_host_status(code) == text

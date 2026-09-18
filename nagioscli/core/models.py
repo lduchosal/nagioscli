@@ -6,8 +6,9 @@ from enum import IntEnum
 
 
 class ServiceStatus(IntEnum):
-    """Nagios service status codes."""
+    """Nagios service status codes (SERVICE_* bitmasks of cgiutils.h)."""
 
+    PENDING = 1
     OK = 2
     WARNING = 4
     UNKNOWN = 8
@@ -15,8 +16,9 @@ class ServiceStatus(IntEnum):
 
 
 class HostStatus(IntEnum):
-    """Nagios host status codes."""
+    """Nagios host status codes (HOST_* bitmasks of cgiutils.h)."""
 
+    PENDING = 1
     UP = 2
     DOWN = 4
     UNREACHABLE = 8
@@ -57,18 +59,19 @@ class Service:
     @property
     def status_text(self) -> str:
         """Return human-readable status."""
-        status_map = {
+        status_map: dict[int, str] = {
+            ServiceStatus.PENDING: "PENDING",
             ServiceStatus.OK: "OK",
             ServiceStatus.WARNING: "WARNING",
             ServiceStatus.CRITICAL: "CRITICAL",
             ServiceStatus.UNKNOWN: "UNKNOWN",
         }
-        return status_map.get(ServiceStatus(self.status), f"UNKNOWN({self.status})")
+        return status_map.get(self.status, f"UNKNOWN({self.status})")
 
     @property
     def is_problem(self) -> bool:
-        """Check if service is in problem state."""
-        return self.status != ServiceStatus.OK
+        """Check if service is in problem state (PENDING is not one)."""
+        return self.status not in (ServiceStatus.PENDING, ServiceStatus.OK)
 
 
 @dataclass
@@ -89,17 +92,18 @@ class Host:
     @property
     def status_text(self) -> str:
         """Return human-readable status."""
-        status_map = {
+        status_map: dict[int, str] = {
+            HostStatus.PENDING: "PENDING",
             HostStatus.UP: "UP",
             HostStatus.DOWN: "DOWN",
             HostStatus.UNREACHABLE: "UNREACHABLE",
         }
-        return status_map.get(HostStatus(self.status), f"UNKNOWN({self.status})")
+        return status_map.get(self.status, f"UNKNOWN({self.status})")
 
     @property
     def is_problem(self) -> bool:
-        """Check if host is in problem state."""
-        return self.status != HostStatus.UP
+        """Check if host is in problem state (PENDING is not one)."""
+        return self.status not in (HostStatus.PENDING, HostStatus.UP)
 
 
 @dataclass
