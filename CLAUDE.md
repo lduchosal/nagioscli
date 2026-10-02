@@ -18,7 +18,17 @@ nagioscli/
 ├── core/               # client, config, auth, models, exceptions
 └── services/           # higher-level ops composed from core
 tests/{unit,integration,fixtures}
+vscode/                 # VS Code extension (JS + JSDoc, own npm toolchain)
 ```
+
+The VS Code extension (`vscode/`, ken #1132, pattern semacli ken #1131)
+re-implements the config resolution and the cmd.cgi CSRF flow in JS
+(`vscode/src/config.js`, `api.js`): any change to the `nagioscli.ini`
+format (`core/config.py`, `core/auth.py`) or to the CGI handling
+(`core/client.py`, `core/encoding.py`) must be ported there, tests
+included. `pdm run vscode-install` (npm ci) then `pdm run vscode-check`
+(biome + tsc --noEmit + node --test with a 100% lines / 95% branches
+coverage gate) — also part of `pdm run check`.
 
 `ARCHITECTURE.md` is the source of truth for `ken wiki sync` section
 paths — keep its YAML frontmatter in sync if you add/rename top-level
@@ -30,12 +40,15 @@ packages.
 semacli/kenboard, ken #998). Quality phase: clean, lockfile sync,
 install, outdated report, format (ruff), format-check (black), lint,
 arch (import-linter), typecheck, interrogate, vulture, refurb, full
-test suite with coverage, then the blocking metrics gate
+test suite with coverage, the VS Code extension gates (npm ci, npm
+audit, biome, tsc, node --test), then the blocking metrics gate
 (`scripts/quality_metrics.py` — ceilings + best-ever ratchet vs
-`doc/quality-history.csv`, policy in `doc/code-quality.md`). Publish
-phase: git push + SonarCloud gate (`scripts/sonar_gate.py`), version
-bump, build, PyPI publish, wiki sync/build (non-fatal), release
-commit + `v<version>` tag + push (non-fatal).
+`doc/quality-history.csv`, policy in `doc/code-quality.md`).
+Publish phase: git push + SonarCloud gate (`scripts/sonar_gate.py`),
+version bump (synced to `vscode/package.json`), build, `.vsix`
+packaging, PyPI publish, wiki sync/build (non-fatal), release commit +
+`v<version>` tag + push (non-fatal), then the GitHub release
+`v<version>` carrying `nagioscli-vscode-<version>.vsix`.
 
 - `./publish.sh --quality` runs ONLY the quality phase — no bump, no
   publish. Safe to run anytime; prefer it for validation.
@@ -43,8 +56,10 @@ commit + `v<version>` tag + push (non-fatal).
 - `pdm run check` covers the same local gates (no sonar) for quick
   composite runs; `pdm run lint && pdm run typecheck && pdm run test-quick`
   remains the fastest iteration loop.
-- Never `gh release create` from scripts: `python-publish.yml` uploads
-  to PyPI on GitHub release publication and would double-publish.
+- `gh release create` lives only in `publish.sh` (after `pdm publish`):
+  it fires `python-publish.yml`, whose `twine upload --skip-existing`
+  is then a no-op. Don't add another one, and don't drop
+  `--skip-existing`.
 
 mypy is strict (`disallow_untyped_defs`, `warn_unreachable`, etc.) —
 type new defs fully.

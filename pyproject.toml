@@ -107,6 +107,11 @@ cli = {composite = ["clihelp", "cliproblems"]}
 all = {composite = ["install", "format", "build", "test", "cli"]}
 test = "env PYTHONPATH=src python -m pytest tests/ -v --cov=nagioscli --cov-report=term-missing"
 test-quick = "env PYTHONPATH=src python -m pytest tests/ --tb=no -q"
+# publish.sh variant (pattern semacli ken #1131): progress dots only, full
+# traceback of any failure. `-o addopts=` drops the project-wide -v;
+# --cov-report= keeps the .coverage file the metrics gate reads without
+# printing the per-file table.
+test-publish = "env PYTHONPATH=src python -m pytest tests/ -o addopts= -q --tb=long -rfE -p no:cacheprovider --cov=nagioscli --cov-report="
 test-unit = "env PYTHONPATH=src python -m pytest tests/unit/ -v"
 test-integration = "env PYTHONPATH=src python -m pytest tests/integration/ -v"
 test-cov = "env PYTHONPATH=src python -m pytest tests/ -v --cov=nagioscli --cov-report=html --cov-report=term-missing"
@@ -126,7 +131,18 @@ metrics-gate = "python scripts/quality_metrics.py --gate"
 # HEAD then blocks on the live quality gate. Publish-only (needs a pushed HEAD).
 sonar-gate = "python scripts/sonar_gate.py --timeout 900 --interval 20 --max-wait 3600"
 test-cov-xml = "env PYTHONPATH=src python -m pytest tests/ --cov=nagioscli --cov-report=xml --cov-report=term --cov-fail-under=80"
-check = {composite = ["lint", "format-check", "typecheck", "arch", "vulture", "refurb", "test", "metrics-gate"]}
+# ken #1132 — VS Code extension (vscode/, pattern semacli ken #1131):
+# self-contained npm toolchain (biome + tsc --noEmit on JSDoc + node --test
+# with a coverage gate), packaged to a .vsix by publish.sh and attached to
+# the GitHub release.
+vscode-install = { shell = "cd vscode && npm ci --no-fund --no-audit" }
+vscode-audit = { shell = "cd vscode && npm audit" }
+vscode-lint = { shell = "cd vscode && npm run lint" }
+vscode-typecheck = { shell = "cd vscode && npm run typecheck" }
+vscode-test = { shell = "cd vscode && npm run coverage" }
+vscode-package = { shell = "cd vscode && npm run package" }
+vscode-check = {composite = ["vscode-lint", "vscode-typecheck", "vscode-test"]}
+check = {composite = ["lint", "format-check", "typecheck", "arch", "vulture", "refurb", "test", "metrics-gate", "vscode-check"]}
 clean = "rm -rf .coverage htmlcov/ .pytest_cache/ __pycache__/ nagioscli/__pycache__/"
 version-patch = "pdm bump patch"
 version-minor = "pdm bump minor"

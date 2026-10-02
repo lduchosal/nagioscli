@@ -31,6 +31,9 @@ A CLI tool to manage Nagios Core via HTTP REST API.
   - Password manager (`pass`) integration
   - Vouch Proxy (SSO/OAuth) support
   - Nginx API token (for CLI/automation)
+- VS Code extension: host and service problems in the sidebar, status
+  detail with plugin output, force check, acknowledge — reads the same
+  `nagioscli.ini` (see [VS Code extension](#vs-code-extension))
 
 ## Installation
 
@@ -46,6 +49,23 @@ git clone https://github.com/lduchosal/nagioscli.git
 cd nagioscli
 pdm install
 ```
+
+### VS Code extension
+
+Each [GitHub release](https://github.com/lduchosal/nagioscli/releases)
+attaches `nagioscli-vscode-<version>.vsix` (no Marketplace):
+
+```bash
+gh release download v<version> -R lduchosal/nagioscli -p '*.vsix'
+code --install-extension nagioscli-vscode-<version>.vsix
+```
+
+It finds `nagioscli.ini` from the workspace folder upwards (then
+`~/.nagioscli.ini`, `/usr/local/etc/nagioscli.ini`) and honours every
+`[auth]` method (including `pass_path` and the `nagioscli login` Vouch
+token) and the `[settings]` like the CLI. The tree and the open status
+documents refresh every 60 s (`nagioscli.autoRefreshSeconds`). Details:
+[`vscode/README.md`](vscode/README.md).
 
 ## Quick Start
 
@@ -290,6 +310,14 @@ pdm typecheck
 
 # Build
 pdm build
+
+# VS Code extension (vscode/, Node >= 20)
+pdm run vscode-install    # npm ci
+pdm run vscode-check      # biome + tsc --noEmit + node --test (coverage gate)
+pdm run vscode-package    # vscode/nagioscli-vscode-<version>.vsix
+
+# Full local quality gate, no release
+./publish.sh --quality
 ```
 
 ## Architecture

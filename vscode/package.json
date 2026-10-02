@@ -1,0 +1,180 @@
+{
+  "name": "nagioscli-vscode",
+  "displayName": "nagioscli",
+  "description": "Nagios Core in VS Code: host and service problems, status detail with plugin output, force check, acknowledge (ken #1132).",
+  "version": "0.1.27",
+  "publisher": "lduchosal",
+  "license": "MIT",
+  "icon": "media/nagioscli.png",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lduchosal/nagioscli"
+  },
+  "engines": {
+    "vscode": "^1.90.0",
+    "node": ">=20"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "nagios",
+    "monitoring",
+    "nagioscli"
+  ],
+  "main": "./src/extension.js",
+  "activationEvents": [
+    "workspaceContains:**/nagioscli.ini"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "nagioscli",
+          "title": "Nagios",
+          "icon": "media/nagioscli.svg"
+        }
+      ]
+    },
+    "views": {
+      "nagioscli": [
+        {
+          "id": "nagioscli.status",
+          "name": "Status"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "nagioscli.refresh",
+        "title": "Refresh",
+        "category": "nagioscli",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "nagioscli.openNagios",
+        "title": "Open Nagios in browser",
+        "category": "nagioscli",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "nagioscli.showStatus",
+        "title": "Show status detail",
+        "category": "nagioscli"
+      },
+      {
+        "command": "nagioscli.openInNagios",
+        "title": "Open in Nagios",
+        "category": "nagioscli"
+      },
+      {
+        "command": "nagioscli.forceCheck",
+        "title": "Force check now",
+        "category": "nagioscli",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "nagioscli.acknowledge",
+        "title": "Acknowledge problem…",
+        "category": "nagioscli",
+        "icon": "$(bell-slash)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "nagioscli.refresh",
+          "when": "view == nagioscli.status",
+          "group": "navigation"
+        },
+        {
+          "command": "nagioscli.openNagios",
+          "when": "view == nagioscli.status",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "nagioscli.acknowledge",
+          "when": "view == nagioscli.status && viewItem =~ /\\.problem$/",
+          "group": "inline"
+        },
+        {
+          "command": "nagioscli.forceCheck",
+          "when": "view == nagioscli.status && viewItem =~ /^(host|service)\\./",
+          "group": "inline"
+        },
+        {
+          "command": "nagioscli.showStatus",
+          "when": "view == nagioscli.status && viewItem =~ /^(host|service)\\./",
+          "group": "0_show"
+        },
+        {
+          "command": "nagioscli.forceCheck",
+          "when": "view == nagioscli.status && viewItem =~ /^(host|service)\\./",
+          "group": "1_act"
+        },
+        {
+          "command": "nagioscli.acknowledge",
+          "when": "view == nagioscli.status && viewItem =~ /\\.problem$/",
+          "group": "1_act"
+        },
+        {
+          "command": "nagioscli.openInNagios",
+          "when": "view == nagioscli.status && viewItem =~ /^(host|service)\\./",
+          "group": "2_open"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "nagioscli.showStatus",
+          "when": "false"
+        },
+        {
+          "command": "nagioscli.openInNagios",
+          "when": "false"
+        },
+        {
+          "command": "nagioscli.forceCheck",
+          "when": "false"
+        },
+        {
+          "command": "nagioscli.acknowledge",
+          "when": "false"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "nagioscli",
+      "properties": {
+        "nagioscli.autoRefreshSeconds": {
+          "type": "number",
+          "default": 60,
+          "minimum": 0,
+          "description": "Refresh the status tree and the open detail documents every N seconds (0 disables it). Skipped while the VS Code window is in the background."
+        },
+        "nagioscli.hideHandled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Hide acknowledged problems and problems in scheduled downtime from the problem groups (they stay under All hosts)."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "lint": "biome check src test",
+    "typecheck": "tsc --noEmit -p jsconfig.json",
+    "test": "node --test 'test/*.test.js'",
+    "coverage": "node --disable-warning=MaxListenersExceededWarning --test --experimental-test-coverage --test-coverage-lines=100 --test-coverage-branches=95 --test-coverage-functions=95 --test-coverage-exclude=test/** --test-reporter=dot --test-reporter-destination=stdout --test-reporter=spec --test-reporter-destination=test-report.txt --test-reporter=lcov --test-reporter-destination=lcov.info 'test/*.test.js' || { grep -h 'does not meet threshold' test-report.txt; exit 1; }",
+    "check": "npm run lint && npm run typecheck && npm run coverage",
+    "package": "cp ../LICENSE LICENSE && vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/node": "^20.17.0",
+    "@types/vscode": "~1.90.0",
+    "@vscode/vsce": "^3.2.1",
+    "typescript": "^5.9.3"
+  }
+}

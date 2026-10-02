@@ -1,5 +1,12 @@
 #!/bin/sh
 
+# The whole script is one { ... } block: the shell parses it entirely before
+# running the first line. Without it, sh reads the file as it executes, so
+# editing publish.sh during a run (e.g. a commit while the SonarCloud gate
+# waits) shifts the byte offsets and the run resumes mid-line (pattern
+# semacli ken #1131, imported with the VS Code extension, ken #1132).
+{
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -48,12 +55,15 @@ for arg in "$@"; do
     esac
 done
 
-# Set total steps based on mode (auto-incremented counter — the semacli
-# script showed hand-numbered steps drift as the pipeline grows)
+# Set total steps based on mode (one per print_step call — the semacli
+# script showed hand-numbered steps drift as the pipeline grows):
+#   18 = 15 Python gates + 3 VS Code extension gates (ken #1132)
+#   +11 publish-only: push, sonar gate, bump, build, .vsix, PyPI, wiki sync,
+#       wiki build, git commit + tag + push, GitHub release, clean
 if [ "$QUALITY_ONLY" = true ]; then
-    STEPS=15
+    STEPS=18
 else
-    STEPS=24
+    STEPS=29
 fi
 STEP=0
 
@@ -168,7 +178,21 @@ run_command "pdm run refurb" "Code quality check"
 # Full suite with coverage: the metrics gate below reads the .coverage
 # file this run leaves behind.
 print_step "Running Tests (full suite, coverage)"
-run_command "pdm run test" "Tests (full suite, coverage)"
+run_command "pdm run test-publish" "Tests (full suite, coverage)"
+
+# VS Code extension (ken #1132): own npm toolchain under vscode/. npm ci
+# from the committed lockfile, then a blocking audit — a known vulnerability
+# in the toolchain stops the release (bump the dependency, don't ignore it).
+print_step "Installing VS Code Extension Dependencies (npm ci)"
+run_command "pdm run vscode-install" "VS Code extension dependencies"
+
+print_step "VS Code Extension Security Audit (npm audit)"
+run_command "pdm run vscode-audit" "VS Code extension security audit"
+
+print_step "VS Code Extension: lint + type check + tests (coverage gate)"
+run_command "pdm run vscode-lint" "VS Code extension lint + format (biome)"
+run_command "pdm run vscode-typecheck" "VS Code extension type check (tsc)"
+run_command "pdm run vscode-test" "VS Code extension tests + coverage"
 
 # Blocking quality-metrics gate (pattern semacli ken #828): absolute
 # ceilings + best-ever ratchet against doc/quality-history.csv — see
@@ -198,9 +222,25 @@ run_command "pdm run sonar-gate" "SonarCloud quality gate"
 
 print_step "Bumping Version (pdm run version-${BUMP_TYPE})"
 run_command "pdm run version-${BUMP_TYPE}" "Version bump"
+VERSION=$(grep '^__version__' nagioscli/__init__.py | cut -d'"' -f2)
+# The .vsix carries the nagioscli release it was built with (ken #1132).
+# `"version"` is the only such key in vscode/package.json (guarded by
+# tests/unit/test_vscode_extension.py); portable sed (BSD + GNU).
+sed -i.bak 's/"version": "[^"]*"/"version": "'"${VERSION}"'"/' vscode/package.json && rm vscode/package.json.bak
+grep -q "\"version\": \"${VERSION}\"" vscode/package.json || print_error "vscode/package.json not synced to ${VERSION}"
+print_success "Version ${VERSION} synced to vscode/package.json"
 
 print_step "Building Package (pdm build)"
 run_command "pdm build" "Package build"
+
+# Packaged BEFORE the PyPI upload: a vsce failure aborts while nothing is
+# live yet. vsce names the file after vscode/package.json's version, so the
+# check below also proves the .vsix matches the release (kenboard ken #1130).
+print_step "Packaging VS Code Extension (.vsix)"
+VSIX="vscode/nagioscli-vscode-${VERSION}.vsix"
+rm -f vscode/*.vsix
+run_command "pdm run vscode-package" "VS Code extension package"
+[ -f "${VSIX}" ] || print_error "vsce did not produce ${VSIX}"
 
 print_step "Publishing Package to PyPI (pdm publish)"
 run_command "pdm publish" "Package publishing"
@@ -219,11 +259,8 @@ run_command_soft "ken wiki build" "Wiki build"
 # ── Git commit + tag + push ──────────────────────────────────────────────
 # Captures the version bump, the regenerated wiki, and any other tracked
 # changes still in the working tree, then tags the release (v<version>,
-# same scheme as the existing tags). No `gh release create` here: the
-# python-publish.yml workflow uploads to PyPI on GitHub release publication
-# and would double-publish. Non-fatal: PyPI is already updated, so a git
-# hiccup must not abort the script — the operator pushes manually.
-VERSION=$(grep '^__version__' nagioscli/__init__.py | cut -d'"' -f2)
+# same scheme as the existing tags). Non-fatal: PyPI is already updated, so
+# a git hiccup must not abort the script — the operator pushes manually.
 print_step "Git Commit + Tag + Push (release artifacts)"
 COMMIT_MSG="release: v${VERSION} — auto by publish.sh"
 echo "${YELLOW}→ Running: git add -A && git commit -m \"${COMMIT_MSG}\" && git tag v${VERSION} && git push && git push --tags${NC}"
@@ -245,6 +282,27 @@ else
     echo "${YELLOW}${BOLD}⚠ Git commit failed — fix and push v${VERSION} manually${NC}"
 fi
 
+# ── GitHub release with the VS Code extension (ken #1132) ────────────────
+# PyPI is live by now: stop on error, but print the exact recovery command.
+# The tag must point at the release commit — the git step above is soft, so
+# check HEAD before tagging. Idempotent: an existing release (re-run) gets
+# the asset re-uploaded with --clobber. Creating the release fires
+# python-publish.yml, whose `twine upload --skip-existing` is then a no-op.
+TAG="v${VERSION}"
+print_step "GitHub Release ${TAG} (.vsix)"
+RECOVER="git tag ${TAG} && git push origin ${TAG} && gh release create ${TAG} --verify-tag --title 'nagioscli ${VERSION}' --generate-notes ${VSIX}"
+[ "$(git log -1 --format=%s)" = "${COMMIT_MSG}" ] \
+    || print_error "HEAD is not the release commit — recover by hand: ${RECOVER}"
+command -v gh > /dev/null 2>&1 || print_error "gh CLI not found — recover: ${RECOVER}"
+git rev-parse -q --verify "refs/tags/${TAG}" > /dev/null || run_command "git tag ${TAG}" "Git tag ${TAG}"
+run_command "git push origin ${TAG}" "Push tag ${TAG}"
+if gh release view "${TAG}" > /dev/null 2>&1; then
+    run_command "gh release upload ${TAG} ${VSIX} --clobber" "Attach $(basename "${VSIX}") to ${TAG}"
+else
+    run_command "gh release create ${TAG} --verify-tag --title 'nagioscli ${VERSION}' --generate-notes ${VSIX}" \
+        "GitHub release ${TAG} with $(basename "${VSIX}")"
+fi
+
 print_step "Cleaning Build Artifacts (pdm run clean)"
 run_command_soft "pdm run clean" "Clean"
 
@@ -252,5 +310,9 @@ echo ""
 echo "${GREEN}${BOLD}🎉 PUBLISHING COMPLETED SUCCESSFULLY! 🎉${NC}"
 echo "${GREEN}${BOLD}═══════════════════════════════════════════════════════════════${NC}"
 echo "${GREEN}nagioscli v${VERSION} has been published to PyPI and tagged.${NC}"
+echo "${GREEN}GitHub release v${VERSION} carries nagioscli-vscode-${VERSION}.vsix.${NC}"
 echo "${GREEN}Wiki sync + build + git push ran in non-fatal mode after.${NC}"
 echo ""
+
+exit 0
+}
