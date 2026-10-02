@@ -1,0 +1,163 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>#1109 — CORE / status service plante sur un service en PENDING (status 1) — kenboard wiki</title><style>body{margin:0;font-family:system-ui,sans-serif;color:#222;background:#fff}
+.layout{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+nav.sidebar{background:#f6f8fa;border-right:1px solid #d0d7de;padding:16px;
+  overflow-y:auto;font-size:13px}
+nav.sidebar h1{font-size:14px;text-transform:uppercase;color:#57606a;margin:0 0 12px}
+nav.sidebar ul{list-style:none;padding:0;margin:0}
+nav.sidebar li{margin:2px 0}
+nav.sidebar a{color:#0969da;text-decoration:none}
+nav.sidebar a:hover{text-decoration:underline}
+nav.sidebar a.current{font-weight:600;color:#1a1a1a}
+main{padding:24px 32px;max-width:900px}
+main h1{margin-top:0}
+main code{background:#f6f8fa;padding:1px 4px;border-radius:3px;font-size:90%}
+main pre{background:#f6f8fa;padding:12px;border-radius:6px;overflow-x:auto}
+main pre code{background:transparent;padding:0}
+main a{color:#0969da}
+/* Task detail (#376f — mirrors templates/modals/task_fullscreen.html) */
+.fullscreen-card{background:#fff;border:1px solid #d0d7de;border-radius:10px;
+  padding:32px 36px;max-width:760px}
+.fullscreen-header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.fullscreen-id{font-size:12px;color:#57606a;font-weight:600}
+.fullscreen-status{font-size:11px;text-transform:uppercase;letter-spacing:.5px;
+  color:#57606a;background:#f6f8fa;padding:3px 8px;border-radius:10px}
+.fullscreen-status.status-todo{background:#ddf4ff;color:#0969da}
+.fullscreen-status.status-doing{background:#fff8c5;color:#9a6700}
+.fullscreen-status.status-review{background:#dafbe1;color:#1a7f37}
+.fullscreen-status.status-done{background:#eaeef2;color:#57606a}
+.fullscreen-title{font-size:22px;font-weight:700;margin:0 0 16px;line-height:1.3}
+.fullscreen-meta{display:flex;align-items:center;gap:10px;margin-bottom:20px;
+  font-size:13px;color:#57606a}
+.task-avatar{width:28px;height:28px;border-radius:50%;display:flex;
+  align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px}
+.fs-who{font-weight:600;color:#222}
+.fullscreen-desc{font-size:14px;line-height:1.7;border-top:1px solid #d0d7de;
+  padding-top:16px}
+.fullscreen-desc h1,.fullscreen-desc h2,.fullscreen-desc h3{margin-top:16px;
+  margin-bottom:8px}
+.fullscreen-desc pre{background:#f6f8fa;border-radius:4px;padding:12px;
+  overflow-x:auto;font-size:12px}
+.fullscreen-desc code{background:#f6f8fa;border-radius:3px;padding:1px 4px;font-size:12px}
+.fullscreen-desc pre code{background:transparent;padding:0}
+.fullscreen-desc ul,.fullscreen-desc ol{padding-left:20px}
+.wiki-nav{margin-top:20px;padding-top:12px;border-top:1px solid #d0d7de;
+  font-size:13px;color:#57606a}
+.wiki-nav a{color:#0969da}
+</style></head><body><div class="layout"><nav class="sidebar"><h1>kenboard wiki</h1><ul><li><a href="../index.html">Home</a></li><li style="padding-left:0px"><a href="../../cli/index.html">CLI layer</a></li><li style="padding-left:12px"><a href="../../cli/commands/index.html">CLI commands</a></li><li style="padding-left:0px"><a href="../../core/index.html">Core</a></li><li style="padding-left:12px"><a href="../../core/models/index.html" class="current">Core / models</a></li><li style="padding-left:12px"><a href="../../core/client/index.html">Core / client</a></li><li style="padding-left:0px"><a href="../../services/index.html">Services</a></li><li style="padding-left:0px"><a href="../../vscode/index.html">VS Code extension</a></li><li style="padding-left:0px"><a href="../../tests/index.html">Tests</a></li><li style="padding-left:0px"><a href="../../packaging/index.html">Packaging & tooling</a></li><li style="padding-left:0px"><a href="../../docs/index.html">Documentation</a></li></ul></nav><main><div class="fullscreen-card"><div class="fullscreen-header"><span class="fullscreen-id">#1109</span><span class="fullscreen-status status-review">review</span></div><h2 class="fullscreen-title">CORE / status service plante sur un service en PENDING (status 1)</h2><div class="fullscreen-meta"><div class="task-avatar" style="background:#0a3069">C</div><span class="fs-who">Claude</span><span>Classified 2026-09-18</span><span>by key:c6597e8c-4d84-44f1-821e-8f9ad6720cf6</span></div><div class="fullscreen-desc"><p><strong>TL;DR</strong> — <code>nagioscli status service</code> (et <code>status host</code>) lève <code>ValueError</code> sur un service/hôte
+en <strong>PENDING</strong> (<code>status = 1</code>) : l'enum <code>ServiceStatus</code> / <code>HostStatus</code> ne connaît pas la valeur 1,
+et la conversion <code>ServiceStatus(self.status)</code> lève <strong>avant</strong> que le repli <code>UNKNOWN(n)</code> prévu
+juste à côté puisse s'appliquer.</p>
+<h2>Symptôme</h2>
+<pre><code>$ nagioscli status service &lt;host&gt; &lt;service&gt;
+Error: 1 is not a valid ServiceStatus
+</code></pre>
+<p>Exit code 1, aucune sortie — même profil que ken #1104 : la commande est aveugle précisément
+sur un service qui n'a pas encore de résultat de check.</p>
+<p>Reproduction minimale :</p>
+<pre><code class="language-python">from nagioscli.core.models import Service, Host
+Service(host_name=&quot;h&quot;, description=&quot;FW&quot;, status=1, plugin_output=&quot;&quot;).status_text
+# ValueError: 1 is not a valid ServiceStatus
+Host(name=&quot;h&quot;, address=&quot;&quot;, status=1, plugin_output=&quot;&quot;).status_text
+# ValueError: 1 is not a valid HostStatus
+</code></pre>
+<h2>Cause</h2>
+<p><code>nagioscli/core/models.py</code>. Nagios Core code les états sur des bits : pour un service
+<code>PENDING=1, OK=2, WARNING=4, UNKNOWN=8, CRITICAL=16</code> ; pour un hôte <code>PENDING=1, UP=2, DOWN=4,
+UNREACHABLE=8</code>. Les deux enums démarrent à 2 — <strong>PENDING (1) manque</strong>.</p>
+<pre><code class="language-python">return status_map.get(ServiceStatus(self.status), f&quot;UNKNOWN({self.status})&quot;)
+#                     ^^^^^^^^^^^^^^^^^^^^^^^^^^ lève ValueError ici
+</code></pre>
+<p>Le repli <code>f"UNKNOWN({self.status})"</code> est du <strong>code mort</strong> : <code>.get()</code> n'est jamais atteint pour
+une valeur inconnue, puisque c'est la construction de l'enum (l'argument) qui lève. Tout code
+d'état non prévu — PENDING aujourd'hui, un futur code demain — plante au lieu de dégrader.</p>
+<h2>Portée</h2>
+<ul>
+<li>Plantent (passent par <code>Service.status_text</code> / <code>Host.status_text</code>) :
+  <code>status service</code>, <code>status service --json</code>, <code>status service --quiet</code>, et les équivalents
+  <code>status host</code>.</li>
+<li>Ne plantent pas : <code>problems</code>, <code>services</code>, <code>hosts</code>, <code>check-problems</code> — ils passent par
+  <code>OutputFormatter.format_service_status()</code> / <code>format_host_status()</code> (<code>cli/handlers.py</code>), un
+  dict <code>dict[int, str]</code> sans enum. Mais ces tables <strong>ignorent PENDING</strong> elles aussi et
+  affichent <code>UNKNOWN(1)</code>, ce qui est faux et trompeur : un service en attente de premier check
+  n'est pas en UNKNOWN.</li>
+</ul>
+<h2>Correctif proposé</h2>
+<ol>
+<li><code>core/models.py</code> — ajouter <code>PENDING = 1</code> à <code>ServiceStatus</code> et à <code>HostStatus</code>, et l'ajouter
+   aux deux tables <code>status_map</code>.</li>
+<li><code>core/models.py</code> — rendre <code>status_text</code> réellement tolérant : indexer la table par <code>int</code>
+   (<code>status_map.get(self.status, f"UNKNOWN({self.status})")</code>) au lieu de construire l'enum.
+   Le repli redevient vivant et un code d'état inconnu s'affiche au lieu de planter.</li>
+<li><code>cli/handlers.py</code> — ajouter <code>1: "PENDING"</code> aux deux tables de <code>OutputFormatter</code> pour que
+   <code>problems</code> / <code>services</code> / <code>hosts</code> cessent d'afficher <code>UNKNOWN(1)</code>.</li>
+<li><strong>Décision à prendre</strong> : <code>Service.is_problem</code> / <code>Host.is_problem</code> valent aujourd'hui
+   <code>status != OK</code> / <code>status != UP</code>, donc <strong>PENDING compte comme un problème</strong>. À confirmer :
+   un check jamais exécuté n'est pas un état d'erreur, et <code>get_problems()</code> filtre déjà côté
+   serveur sur <code>warning critical unknown</code> — PENDING ne remonte donc jamais dans <code>problems</code>.
+   L'incohérence est aujourd'hui invisible mais réelle.</li>
+</ol>
+<h2>Tests de non-régression</h2>
+<ul>
+<li><code>Service(status=1).status_text == "PENDING"</code> et idem <code>Host</code>.</li>
+<li>Un code d'état inconnu (ex. <code>status=99</code>) rend <code>"UNKNOWN(99)"</code> <strong>sans lever</strong> — c'est le repli
+  qui était mort.</li>
+<li>Bout en bout CLI : <code>status service</code> / <code>status host</code> sur une réponse <code>statusjson.cgi</code> avec
+  <code>"status": 1</code>, en texte, <code>--json</code> et <code>--quiet</code>, exit 0.</li>
+<li><code>OutputFormatter.format_service_status(1) == "PENDING"</code>.</li>
+</ul>
+<h2>Contexte</h2>
+<p>Signalé par l'utilisateur en production. Même famille que ken #1104 (une valeur inattendue dans
+la réponse Nagios fait planter toute la commande au lieu de dégrader proprement).</p>
+<hr />
+<h2>Résolution</h2>
+<h3>Modifications</h3>
+<ul>
+<li><strong><code>nagioscli/core/models.py</code></strong> — <code>PENDING = 1</code> ajouté à <code>ServiceStatus</code> <strong>et</strong> <code>HostStatus</code>,
+  avec l'entrée correspondante dans les deux <code>status_map</code>. Docstrings des enums référencent
+  désormais les macros <code>SERVICE_*</code> / <code>HOST_*</code> de <code>cgiutils.h</code> (Nagios Core), source des valeurs.</li>
+<li><strong><code>nagioscli/core/models.py</code></strong> — le repli redevient vivant : <code>status_map</code> est typée
+  <code>dict[int, str]</code> et la recherche se fait sur l'<code>int</code> brut
+  (<code>status_map.get(self.status, f"UNKNOWN({self.status})")</code>) au lieu de
+  <code>status_map.get(ServiceStatus(self.status), ...)</code>. C'était la vraie cause : la conversion
+  d'enum levait sur l'<strong>argument</strong>, donc le <code>.get()</code> et son défaut n'étaient jamais atteints.
+  N'importe quel code d'état futur dégrade maintenant en <code>UNKNOWN(n)</code> au lieu de planter.</li>
+<li><strong><code>nagioscli/core/models.py</code></strong> — <code>is_problem</code> : PENDING n'est plus un problème
+  (<code>status not in (PENDING, OK)</code> / <code>(PENDING, UP)</code>). Un check jamais exécuté n'est pas un état
+  d'erreur. Aucun chemin de production n'en dépendait (<code>get_problems()</code> filtre déjà côté serveur
+  sur <code>warning critical unknown</code>, <code>is_problem</code> n'était lu que par les tests).</li>
+<li><strong><code>nagioscli/cli/handlers.py</code></strong> — <code>1: "PENDING"</code> ajouté aux deux tables de <code>OutputFormatter</code>,
+  qui affichaient <code>UNKNOWN(1)</code> dans <code>problems</code> / <code>services</code> / <code>hosts</code> / <code>check-problems</code>.</li>
+<li><strong>Tests (+14, 169 → 183)</strong> — <code>test_models.py</code> : PENDING service + hôte (texte et
+  <code>is_problem is False</code>), code non mappé <code>99</code> → <code>"UNKNOWN(99)"</code> sans lever, <code>PENDING == 1</code> dans
+  les deux enums ; <code>test_handlers.py</code> : <code>(1, "PENDING")</code> ajouté aux deux paramétrages ;
+  <code>test_cli_commands.py</code> : <code>status service</code> en texte, <code>--json</code> et <code>--quiet</code>, et <code>status host</code>,
+  sur un état PENDING.</li>
+</ul>
+<h3>Autres valeurs manquantes — vérification demandée</h3>
+<p>Revue des bitmasks Nagios Core (<code>include/cgiutils.h</code>), qui sont ce que renvoie le champ
+<code>status</code> de <code>statusjson.cgi</code> :</p>
+<ul>
+<li>service : <code>PENDING 1</code>, <code>OK 2</code>, <code>WARNING 4</code>, <code>UNKNOWN 8</code>, <code>CRITICAL 16</code> — <strong>complet</strong> après ce
+  correctif.</li>
+<li>hôte : <code>PENDING 1</code>, <code>UP 2</code>, <code>DOWN 4</code>, <code>UNREACHABLE 8</code> — <strong>complet</strong> après ce correctif.</li>
+</ul>
+<p>PENDING était donc le seul trou dans les deux enums. Les autres champs énumérés de la réponse
+(<code>state_type</code> 0/1, <code>acknowledgement_type</code> 0/1/2) sont manipulés comme des entiers et ne passent
+par aucune conversion d'enum : ils ne peuvent pas lever. Le repli vivant couvre de toute façon
+tout code ajouté en amont par une version future de Nagios.</p>
+<h3>Comportements obtenus</h3>
+<ul>
+<li>Exécution réelle du binaire contre un faux <code>statusjson.cgi</code> servant <code>"status": 1</code> :
+  <code>status service</code> → exit 0, <code>Status: PENDING</code> ; <code>--quiet</code> → <code>PENDING</code> ; <code>status host</code> →
+  exit 0, <code>Status: PENDING</code>. Avant : <code>Error: 1 is not a valid ServiceStatus</code>, exit 1, sans sortie.</li>
+<li><code>problems</code> / <code>services</code> / <code>hosts</code> affichent <code>PENDING</code> au lieu de <code>UNKNOWN(1)</code>.</li>
+<li>Sans le correctif, 9 des tests ajoutés échouent — chaque comportement est couvert.</li>
+</ul>
+<h3>Garde-fous</h3>
+<ul>
+<li><code>pdm run check</code> vert : ruff, black, mypy strict, import-linter, vulture, refurb,
+  <strong>183 tests</strong>, couverture 94 %, <code>core/models.py</code> et <code>cli/handlers.py</code> à <strong>100 %</strong>,
+  metrics gate palier 1 PASS.</li>
+<li><code>dict[int, str]</code> explicite sur les deux <code>status_map</code> : mypy strict refuserait sinon une
+  recherche par <code>int</code> dans une table indexée par membres d'enum.</li>
+</ul></div><div class="wiki-nav"><a href="index.html">← retour à core/models</a> · <a href="../../log.html">voir log</a></div></div></main></div></body></html>

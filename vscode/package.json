@@ -2,7 +2,7 @@
   "name": "nagioscli-vscode",
   "displayName": "nagioscli",
   "description": "Nagios Core in VS Code: host and service problems, status detail with plugin output, force check, acknowledge (ken #1132).",
-  "version": "0.1.27",
+  "version": "0.1.28",
   "publisher": "lduchosal",
   "license": "MIT",
   "icon": "media/nagioscli.png",

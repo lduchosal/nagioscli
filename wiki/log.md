@@ -2,6 +2,8 @@
 
 Most recent first.
 
+- 2026-10-02T18:58:31 — task #1132 (VSCODE / Extension VS Code nagioscli) → `vscode` (by key:c6597e8c-4d84-44f1-821e-8f9ad6720cf6)
+- 2026-09-18T10:19:43 — task #1109 (CORE / status service plante sur un service en PENDING (status 1)) → `core/models` (by key:c6597e8c-4d84-44f1-821e-8f9ad6720cf6)
 - 2026-09-16T17:57:35 — task #1104 (NAGIOSCLI / Decodage UTF-8 strict - une sortie de plugin en cp1252 fait planter la commande entiere) → `core/client` (by key:c6597e8c-4d84-44f1-821e-8f9ad6720cf6)
 - 2026-07-28T08:56:56 — task #747 (CLI / nagioscli self-update command) → `cli/commands` (by key:c6597e8c-4d84-44f1-821e-8f9ad6720cf6)
 - 2026-07-28T08:56:55 — task #628 (QUALITY / Raise code coverage from 35% to 80%+) → `tests` (by key:c6597e8c-4d84-44f1-821e-8f9ad6720cf6)
