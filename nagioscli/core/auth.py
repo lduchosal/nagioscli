@@ -1,6 +1,9 @@
 """Authentication management for nagioscli."""
 
+import os
+import shutil
 import subprocess
+from collections.abc import Sequence
 from pathlib import Path
 
 from .config import NagiosConfig
@@ -8,6 +11,19 @@ from .exceptions import AuthenticationError
 
 # Token cache file location
 TOKEN_CACHE_FILE = Path.home() / ".nagioscli_token"
+
+# ken #1243 (Sonar S4036): `pass` is looked up only in these system
+# directories, never through the user's PATH, where a writable entry could
+# shadow it with a fake that receives the password request. Mirrored in
+# vscode/src/config.js (PASS_SEARCH_DIRS).
+PASS_SEARCH_DIRS: tuple[str, ...] = (
+    "/usr/bin",
+    "/bin",
+    "/usr/local/bin",
+    "/opt/homebrew/bin",
+    "/opt/local/bin",
+    "/run/current-system/sw/bin",
+)
 
 
 def load_cached_vouch_token() -> str | None:
@@ -55,6 +71,18 @@ def get_credentials(config: NagiosConfig) -> tuple[str, str]:
     return username, password
 
 
+def _find_pass(dirs: Sequence[str] = PASS_SEARCH_DIRS) -> str | None:
+    """Absolute path of the first executable `pass` in ``dirs``.
+
+    Args:
+        dirs: Fixed directories to search, in order (PASS_SEARCH_DIRS).
+
+    Returns:
+        The absolute path, or None when no directory holds one.
+    """
+    return shutil.which("pass", path=os.pathsep.join(dirs))
+
+
 def _get_password_from_pass(pass_path: str) -> str:
     """Retrieve password from pass (password-store).
 
@@ -67,9 +95,16 @@ def _get_password_from_pass(pass_path: str) -> str:
     Raises:
         AuthenticationError: If password cannot be retrieved
     """
+    pass_bin = _find_pass()
+    if pass_bin is None:
+        msg = (
+            f"'pass' command not found in {os.pathsep.join(PASS_SEARCH_DIRS)}."
+            " Install password-store."
+        )
+        raise AuthenticationError(msg)
     try:
         result = subprocess.run(
-            ["pass", pass_path],
+            [pass_bin, pass_path],
             capture_output=True,
             text=True,
             timeout=10,

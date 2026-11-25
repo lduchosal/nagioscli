@@ -5,8 +5,10 @@ const os = require('node:os');
 const path = require('node:path');
 const {
   ConfigError,
+  PASS_SEARCH_DIRS,
   authHeaders,
   findConfigFile,
+  findPass,
   loadCachedVouchToken,
   loadConfig,
   parseConfig,
@@ -190,36 +192,58 @@ test('authHeaders: default options read the real home', async () => {
   assert.deepEqual((await authHeaders(bare({ nginxToken: '' }))).headers, { 'X-API-Key': '' });
 });
 
-/** A fake `pass` executable on PATH answering with `script`. */
-function fakePass(t, script) {
+/** A fake `pass` executable in a fresh dir answering with `script`; returns the dir. */
+function fakePass(script, mode = 0o755) {
   const dir = tmpdir();
-  const bin = path.join(dir, 'pass');
-  fs.writeFileSync(bin, `#!/bin/sh\n${script}\n`, { mode: 0o755 });
-  const savedPath = process.env.PATH;
-  process.env.PATH = `${dir}${path.delimiter}${savedPath}`;
-  t.after(() => {
-    process.env.PATH = savedPath;
-  });
+  fs.writeFileSync(path.join(dir, 'pass'), `#!/bin/sh\n${script}\n`, { mode });
+  return dir;
 }
 
-test('readPass: first line of `pass <path>`, trimmed', async (t) => {
-  fakePass(t, 'echo "  s3cret  "');
-  assert.equal(await readPass('nagios/admin'), 's3cret');
+test('readPass: first line of `pass <path>`, trimmed', async () => {
+  const dir = fakePass('echo "  s3cret  "');
+  assert.equal(await readPass('nagios/admin', [dir]), 's3cret');
 });
 
-test('readPass: error exit, empty output, missing binary', async (t) => {
-  fakePass(t, 'if [ "$1" = empty ]; then exit 0; fi; echo "not in store" >&2; exit 1');
-  await assert.rejects(readPass('nagios/x'), /pass returned error: not in store/);
-  await assert.rejects(readPass('empty'), /Empty password from pass for: empty/);
+test('readPass: error exit, empty output, not found in the fixed dirs', async () => {
+  const dir = fakePass('if [ "$1" = empty ]; then exit 0; fi; echo "not in store" >&2; exit 1');
+  await assert.rejects(readPass('nagios/x', [dir]), /pass returned error: not in store/);
+  await assert.rejects(readPass('empty', [dir]), /Empty password from pass for: empty/);
+  const empty = tmpdir();
+  await assert.rejects(
+    readPass('x', [empty]),
+    (err) =>
+      err instanceof ConfigError && err.message.includes(`'pass' command not found in ${empty}`),
+  );
+});
+
+test('readPass: a failure without stderr reports the process error', async () => {
+  const dir = fakePass('exit 3');
+  await assert.rejects(readPass('x', [dir]), /pass returned error: Command failed/);
+});
+
+test('readPass: a `pass` on the user PATH is never used (Sonar S4036)', async (t) => {
+  const evil = fakePass('echo stolen');
   const saved = process.env.PATH;
-  process.env.PATH = tmpdir();
+  process.env.PATH = `${evil}${path.delimiter}${saved}`;
   t.after(() => {
     process.env.PATH = saved;
   });
-  await assert.rejects(readPass('x'), /'pass' command not found/);
+  await assert.rejects(readPass('x', [tmpdir()]), /'pass' command not found/);
 });
 
-test('readPass: a failure without stderr reports the process error', async (t) => {
-  fakePass(t, 'exit 3');
-  await assert.rejects(readPass('x'), /pass returned error: Command failed/);
+test('findPass: first executable regular file, in order', () => {
+  const missing = path.join(tmpdir(), 'missing');
+  const notExec = fakePass('true', 0o644);
+  const asDir = tmpdir();
+  fs.mkdirSync(path.join(asDir, 'pass'));
+  const ok = fakePass('true');
+  const later = fakePass('true');
+  assert.equal(findPass([missing, notExec, asDir, ok, later]), path.join(ok, 'pass'));
+  assert.equal(findPass([missing, notExec, asDir]), null);
+});
+
+test('PASS_SEARCH_DIRS: absolute system dirs, frozen, defaulted', () => {
+  assert.ok(Object.isFrozen(PASS_SEARCH_DIRS));
+  assert.ok(PASS_SEARCH_DIRS.every((d) => path.isAbsolute(d)));
+  assert.ok(PASS_SEARCH_DIRS.includes('/usr/bin'));
 });

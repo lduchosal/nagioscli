@@ -8,12 +8,20 @@ import pytest
 
 from nagioscli.core import auth as auth_mod
 from nagioscli.core.auth import (
+    PASS_SEARCH_DIRS,
+    _find_pass,
     _get_password_from_pass,
     get_credentials,
     load_cached_vouch_token,
 )
 from nagioscli.core.config import NagiosConfig
 from nagioscli.core.exceptions import AuthenticationError
+
+
+@pytest.fixture(autouse=True)
+def pass_in_fixed_dir(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`pass` resolves to a fixed absolute path, whatever the host has."""
+    monkeypatch.setattr(auth_mod, "_find_pass", lambda: "/usr/bin/pass")
 
 
 @pytest.fixture
@@ -104,3 +112,50 @@ class TestGetPasswordFromPass:
         monkeypatch.setattr(subprocess, "run", boom)
         with pytest.raises(AuthenticationError, match="disk full"):
             _get_password_from_pass("nagios/u")
+
+
+class TestFindPass:
+    """ken #1243 (Sonar S4036): `pass` comes from fixed dirs, never PATH."""
+
+    @staticmethod
+    def _exe(directory: Path, mode: int = 0o755) -> Path:
+        directory.mkdir(parents=True, exist_ok=True)
+        exe = directory / "pass"
+        exe.write_text("#!/bin/sh\n")
+        exe.chmod(mode)
+        return exe
+
+    def test_first_executable_in_order(self, tmp_path: Path) -> None:
+        first = self._exe(tmp_path / "a")
+        self._exe(tmp_path / "b")
+        assert _find_pass([str(tmp_path / "missing"), str(first.parent), str(tmp_path / "b")]) == (
+            str(first)
+        )
+
+    def test_skips_non_executable(self, tmp_path: Path) -> None:
+        self._exe(tmp_path / "a", mode=0o644)
+        ok = self._exe(tmp_path / "b")
+        assert _find_pass([str(tmp_path / "a"), str(tmp_path / "b")]) == str(ok)
+
+    def test_ignores_user_path(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        fake = self._exe(tmp_path / "evil")
+        monkeypatch.setenv("PATH", str(fake.parent))
+        assert _find_pass([str(tmp_path / "empty")]) is None
+
+    def test_default_dirs_are_absolute_system_dirs(self) -> None:
+        assert all(d.startswith("/") for d in PASS_SEARCH_DIRS)
+        assert "/usr/bin" in PASS_SEARCH_DIRS
+
+    def test_runs_pass_by_absolute_path(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        run = MagicMock(return_value=MagicMock(returncode=0, stdout="pw\n", stderr=""))
+        monkeypatch.setattr(subprocess, "run", run)
+        _get_password_from_pass("nagios/u")
+        assert run.call_args.args[0] == ["/usr/bin/pass", "nagios/u"]
+
+    def test_not_found_in_fixed_dirs_raises(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(auth_mod, "_find_pass", lambda: None)
+        run = MagicMock()
+        monkeypatch.setattr(subprocess, "run", run)
+        with pytest.raises(AuthenticationError, match="'pass' command not found in /usr/bin"):
+            _get_password_from_pass("nagios/u")
+        run.assert_not_called()

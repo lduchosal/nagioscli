@@ -20,6 +20,18 @@ const DEFAULT_ENV_VAR = 'NAGIOS_PASSWORD';
 const DEFAULT_TIMEOUT = 30;
 const DEFAULT_START_TIME_FORMAT = '%m-%d-%Y %H:%M:%S';
 const PASS_TIMEOUT_MS = 10000;
+// ken #1243 (Sonar S4036): `pass` is looked up only in these system
+// directories, never through the user's PATH, where a writable entry could
+// shadow it with a fake that receives the password request. Mirrors
+// PASS_SEARCH_DIRS in nagioscli/core/auth.py.
+const PASS_SEARCH_DIRS = Object.freeze([
+  '/usr/bin',
+  '/bin',
+  '/usr/local/bin',
+  '/opt/homebrew/bin',
+  '/opt/local/bin',
+  '/run/current-system/sw/bin',
+]);
 const TRUE_WORDS = new Set(['1', 'yes', 'true', 'on']);
 const FALSE_WORDS = new Set(['0', 'no', 'false', 'off']);
 
@@ -37,7 +49,7 @@ const FALSE_WORDS = new Set(['0', 'no', 'false', 'off']);
  * @property {string} startTimeFormat strftime format of cmd.cgi start_time
  */
 
-/** @typedef {(passPath: string) => Promise<string>} PassReader */
+/** @typedef {(passPath: string, dirs?: readonly string[]) => Promise<string>} PassReader */
 
 /** Configuration / credential error with a message meant for the user. */
 class ConfigError extends Error {}
@@ -207,21 +219,42 @@ function loadCachedVouchToken(home = os.homedir()) {
   return fs.readFileSync(file, 'utf8').trim() || null;
 }
 
+/**
+ * Absolute path of the first executable regular file named `pass` in `dirs`.
+ * @param {readonly string[]} dirs fixed directories, searched in order
+ * @returns {string | null}
+ */
+function findPass(dirs) {
+  for (const dir of dirs) {
+    const candidate = path.join(dir, 'pass');
+    try {
+      fs.accessSync(candidate, fs.constants.X_OK);
+      if (fs.statSync(candidate).isFile()) return candidate;
+    } catch {
+      // missing or not executable: try the next directory
+    }
+  }
+  return null;
+}
+
 /** @type {PassReader} */
-function readPass(passPath) {
+function readPass(passPath, dirs = PASS_SEARCH_DIRS) {
+  const passBin = findPass(dirs);
+  if (!passBin) {
+    return Promise.reject(
+      new ConfigError(
+        `'pass' command not found in ${dirs.join(path.delimiter)}. Install password-store.`,
+      ),
+    );
+  }
   return new Promise((resolve, reject) => {
     childProcess.execFile(
-      'pass',
+      passBin,
       [passPath],
       { timeout: PASS_TIMEOUT_MS, encoding: 'utf8' },
       (err, stdout, stderr) => {
         if (err) {
-          const code = /** @type {NodeJS.ErrnoException} */ (err).code;
-          if (code === 'ENOENT') {
-            reject(new ConfigError("'pass' command not found. Install password-store."));
-          } else {
-            reject(new ConfigError(`pass returned error: ${String(stderr).trim() || err.message}`));
-          }
+          reject(new ConfigError(`pass returned error: ${String(stderr).trim() || err.message}`));
           return;
         }
         const password = stdout.trim();
@@ -257,9 +290,11 @@ async function authHeaders(cfg, opts = {}) {
 
 module.exports = {
   ConfigError,
+  PASS_SEARCH_DIRS,
   authHeaders,
   findConfigFile,
   findFileUpwards,
+  findPass,
   loadCachedVouchToken,
   loadConfig,
   parseConfig,
