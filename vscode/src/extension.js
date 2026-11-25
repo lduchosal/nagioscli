@@ -1,13 +1,18 @@
 // @ts-check
 // VS Code glue: sidebar tree of the Nagios state read from nagioscli.ini —
-// host problems, service problems, every host with its services — a
-// read-only detail document per host / service (refreshed with the tree),
-// "Force check", "Acknowledge" and "Open in Nagios" (ken #1132).
+// host problems, service problems, every host with its services, service
+// groups and host groups (ken #1134) — a read-only detail document per
+// host / service (refreshed with the tree), "Force check", "Acknowledge"
+// and "Open in Nagios" (ken #1132).
 
 const vscode = require('vscode');
 const { loadConfig } = require('./config');
 const { NagiosApi } = require('./api');
 const {
+  groupDescription,
+  groupIcon,
+  hostGroupProblems,
+  serviceGroupProblems,
   hostDescription,
   hostDetailText,
   hostState,
@@ -27,19 +32,31 @@ const GROUP_LABELS = {
   hosts: 'Host problems',
   services: 'Service problems',
   all: 'All hosts',
+  servicegroups: 'Service groups',
+  hostgroups: 'Host groups',
 };
 
 /** @typedef {import('./api').Host} Host */
 /** @typedef {import('./api').Service} Service */
+/** @typedef {import('./api').HostGroup} HostGroup */
+/** @typedef {import('./api').ServiceGroup} ServiceGroup */
 /** @typedef {import('./config').NagiosConfig} NagiosConfig */
 /**
+ * Tree nodes. `scope` drives the display (`problem` rows are leaves, `group`
+ * service rows carry their host name); `path` makes the tree item id unique
+ * when the same host / service shows up under several parents.
  * @typedef {{ kind: 'group', key: 'hosts', items: Host[] }
  *   | { kind: 'group', key: 'services', items: Service[] }
  *   | { kind: 'group', key: 'all', items: Host[] }
- *   | { kind: 'host', host: Host, scope: 'problem' | 'all' }
- *   | { kind: 'service', service: Service, scope: 'problem' | 'all' }
+ *   | { kind: 'group', key: 'servicegroups', items: ServiceGroup[] }
+ *   | { kind: 'group', key: 'hostgroups', items: HostGroup[] }
+ *   | { kind: 'servicegroup', group: ServiceGroup }
+ *   | { kind: 'hostgroup', group: HostGroup }
+ *   | { kind: 'host', host: Host, scope: Scope, path: string }
+ *   | { kind: 'service', service: Service, scope: Scope, path: string }
  *   | { kind: 'message', text: string }} Node
  */
+/** @typedef {'problem' | 'all' | 'group'} Scope */
 /**
  * @typedef {object} Deps
  * @property {(dir: string) => NagiosConfig} loadConfig
@@ -51,6 +68,8 @@ const GROUP_LABELS = {
  * @property {Host[]} hostProblems
  * @property {Service[]} serviceProblems
  * @property {Host[]} hosts
+ * @property {ServiceGroup[]} serviceGroups
+ * @property {HostGroup[]} hostGroups
  */
 
 /** @type {Deps} */
@@ -133,15 +152,19 @@ class StatusTreeProvider {
     try {
       if (!folder) throw new Error('Open a folder that contains a nagioscli.ini.');
       const api = this.apiFor(folder.uri.fsPath);
-      const [hostProblems, serviceProblems, hosts] = await Promise.all([
+      const [hostProblems, serviceProblems, hosts, serviceGroups, hostGroups] = await Promise.all([
         api.listHostProblems(),
         api.listServiceProblems(),
         api.listHosts(),
+        api.listServiceGroups(),
+        api.listHostGroups(),
       ]);
       this.snapshot = {
         hostProblems: sortHostProblems(hostProblems.filter(isHostProblem)),
         serviceProblems: sortServiceProblems(serviceProblems.filter(isServiceProblem)),
         hosts: [...hosts].sort((a, b) => a.name.localeCompare(b.name)),
+        serviceGroups,
+        hostGroups,
       };
     } catch (err) {
       this.snapshot = null;
@@ -174,17 +197,51 @@ class StatusTreeProvider {
       return item;
     }
     if (node.kind === 'group') {
+      const problemsOnly = node.key === 'hosts' || node.key === 'services';
       const item = new vscode.TreeItem(
         GROUP_LABELS[node.key],
-        node.key === 'all'
-          ? vscode.TreeItemCollapsibleState.Collapsed
-          : vscode.TreeItemCollapsibleState.Expanded,
+        problemsOnly
+          ? vscode.TreeItemCollapsibleState.Expanded
+          : vscode.TreeItemCollapsibleState.Collapsed,
       );
       item.id = `group:${node.key}`;
       item.description = String(node.items.length);
       return item;
     }
+    if (node.kind === 'hostgroup' || node.kind === 'servicegroup')
+      return this.nagiosGroupItem(node);
     return node.kind === 'host' ? this.hostItem(node) : this.serviceItem(node);
+  }
+
+  /**
+   * A host group / service group: member count, problems among its members.
+   * @param {Extract<Node, { kind: 'hostgroup' | 'servicegroup' }>} node
+   * @returns {vscode.TreeItem}
+   */
+  nagiosGroupItem(node) {
+    const { group } = node;
+    const problems = this.groupProblems(node);
+    const item = new vscode.TreeItem(group.name, vscode.TreeItemCollapsibleState.Collapsed);
+    item.id = `${node.kind}:${group.name}`;
+    item.description = groupDescription(group.members.length, problems);
+    const [icon, color] = groupIcon(problems);
+    item.iconPath = new vscode.ThemeIcon(icon, new vscode.ThemeColor(color));
+    const alias = group.alias && group.alias !== group.name ? `\n\n${group.alias}` : '';
+    item.tooltip = new vscode.MarkdownString(`**${group.name}**${alias}`);
+    item.contextValue = node.kind;
+    return item;
+  }
+
+  /**
+   * Current problems among the members of a group.
+   * @param {Extract<Node, { kind: 'hostgroup' | 'servicegroup' }>} node
+   * @returns {(Host | Service)[]}
+   */
+  groupProblems(node) {
+    if (!this.snapshot) return [];
+    return node.kind === 'hostgroup'
+      ? hostGroupProblems(node.group, this.snapshot.hostProblems)
+      : serviceGroupProblems(node.group, this.snapshot.serviceProblems);
   }
 
   /**
@@ -196,11 +253,11 @@ class StatusTreeProvider {
     const state = hostState(host.status);
     const item = new vscode.TreeItem(
       host.name,
-      node.scope === 'all'
-        ? vscode.TreeItemCollapsibleState.Collapsed
-        : vscode.TreeItemCollapsibleState.None,
+      node.scope === 'problem'
+        ? vscode.TreeItemCollapsibleState.None
+        : vscode.TreeItemCollapsibleState.Collapsed,
     );
-    item.id = `${node.scope}:host:${host.name}`;
+    item.id = `${node.path}:host:${host.name}`;
     item.description = hostDescription(host, this.deps.now());
     this.decorate(item, node, state, host, isHostProblem(host));
     return item;
@@ -214,11 +271,9 @@ class StatusTreeProvider {
     const { service } = node;
     const state = serviceState(service.status);
     const label =
-      node.scope === 'problem'
-        ? `${service.host_name} / ${service.description}`
-        : service.description;
+      node.scope === 'all' ? service.description : `${service.host_name} / ${service.description}`;
     const item = new vscode.TreeItem(label);
-    item.id = `${node.scope}:service:${service.host_name}/${service.description}`;
+    item.id = `${node.path}:service:${service.host_name}/${service.description}`;
     item.description = serviceDescription(service, this.deps.now());
     this.decorate(item, node, state, service, isServiceProblem(service));
     return item;
@@ -251,12 +306,46 @@ class StatusTreeProvider {
   async getChildren(node) {
     if (!node) return this.roots();
     if (node.kind === 'group') return this.groupChildren(node);
-    if (node.kind !== 'host' || node.scope !== 'all' || !this.api) return [];
+    const { api } = this;
+    if (!api) return [];
+    if (node.kind === 'host' && node.scope !== 'problem') {
+      const path = `${node.path}:host:${node.host.name}`;
+      return this.fetchChildren(async () =>
+        (await api.listHostServices(node.host.name))
+          .sort((a, b) => a.description.localeCompare(b.description))
+          .map((service) => ({ kind: 'service', service, scope: 'all', path })),
+      );
+    }
+    if (node.kind === 'hostgroup') {
+      const path = `hostgroup:${node.group.name}`;
+      return this.fetchChildren(async () =>
+        (await api.listGroupHosts(node.group.name))
+          .sort((a, b) => a.name.localeCompare(b.name))
+          .map((host) => ({ kind: 'host', host, scope: 'group', path })),
+      );
+    }
+    if (node.kind === 'servicegroup') {
+      const path = `servicegroup:${node.group.name}`;
+      return this.fetchChildren(async () =>
+        (await api.listGroupServices(node.group.name))
+          .sort(
+            (a, b) =>
+              a.host_name.localeCompare(b.host_name) || a.description.localeCompare(b.description),
+          )
+          .map((service) => ({ kind: 'service', service, scope: 'group', path })),
+      );
+    }
+    return [];
+  }
+
+  /**
+   * Lazily fetched children; an API failure becomes a message row.
+   * @param {() => Promise<Node[]>} fetch
+   * @returns {Promise<Node[]>}
+   */
+  async fetchChildren(fetch) {
     try {
-      const services = await this.api.listHostServices(node.host.name);
-      return [...services]
-        .sort((a, b) => a.description.localeCompare(b.description))
-        .map((service) => ({ kind: 'service', service, scope: 'all' }));
+      return await fetch();
     } catch (err) {
       return [{ kind: 'message', text: errorText(err) }];
     }
@@ -271,6 +360,8 @@ class StatusTreeProvider {
       { kind: 'group', key: 'hosts', items: this.snapshot.hostProblems.filter(keep) },
       { kind: 'group', key: 'services', items: this.snapshot.serviceProblems.filter(keep) },
       { kind: 'group', key: 'all', items: this.snapshot.hosts },
+      { kind: 'group', key: 'servicegroups', items: this.snapshot.serviceGroups },
+      { kind: 'group', key: 'hostgroups', items: this.snapshot.hostGroups },
     ];
   }
 
@@ -279,11 +370,28 @@ class StatusTreeProvider {
    * @returns {Node[]}
    */
   groupChildren(node) {
-    if (node.key === 'services') {
-      return node.items.map((service) => ({ kind: 'service', service, scope: 'problem' }));
+    switch (node.key) {
+      case 'services':
+        return node.items.map((service) => ({
+          kind: 'service',
+          service,
+          scope: 'problem',
+          path: 'problem',
+        }));
+      case 'hosts':
+        return node.items.map((host) => ({
+          kind: 'host',
+          host,
+          scope: 'problem',
+          path: 'problem',
+        }));
+      case 'all':
+        return node.items.map((host) => ({ kind: 'host', host, scope: 'all', path: 'all' }));
+      case 'servicegroups':
+        return node.items.map((group) => ({ kind: 'servicegroup', group }));
+      default:
+        return node.items.map((group) => ({ kind: 'hostgroup', group }));
     }
-    const scope = node.key === 'all' ? 'all' : 'problem';
-    return node.items.map((host) => ({ kind: 'host', host, scope }));
   }
 }
 
@@ -395,7 +503,11 @@ class Controller {
     const { api } = this.tree;
     if (!api) return;
     const target = nodeTarget(node);
-    void vscode.env.openExternal(vscode.Uri.parse(api.webUrl(target?.host, target?.service)));
+    const url =
+      node?.kind === 'hostgroup' || node?.kind === 'servicegroup'
+        ? api.groupUrl(node.kind, node.group.name)
+        : api.webUrl(target?.host, target?.service);
+    void vscode.env.openExternal(vscode.Uri.parse(url));
   }
 
   /**

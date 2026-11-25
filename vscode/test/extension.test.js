@@ -33,6 +33,23 @@ const SERVICES = [
   { host_name: 'web01', description: 'NEW', status: 1 },
 ];
 
+const SERVICE_GROUPS = [
+  {
+    name: 'web',
+    alias: 'Web services',
+    members: [
+      { host_name: 'web01', service_description: 'HTTP' },
+      { host_name: 'web01', service_description: 'DISK' },
+    ],
+  },
+  { name: 'db', alias: 'db', members: [{ host_name: 'db01', service_description: 'DISK' }] },
+  { name: 'empty', alias: '', members: [] },
+];
+const HOST_GROUPS = [
+  { name: 'linux', alias: 'Linux servers', members: ['web01', 'mail01'] },
+  { name: 'backup', alias: '', members: ['backup01'] },
+];
+
 /** Fake NagiosApi recording what the extension asks for. */
 function fakeApi(c = cfg) {
   const api = {
@@ -50,6 +67,27 @@ function fakeApi(c = cfg) {
     },
     async listHosts() {
       return api.hosts;
+    },
+    async listServiceGroups() {
+      return SERVICE_GROUPS;
+    },
+    async listHostGroups() {
+      return HOST_GROUPS;
+    },
+    async listGroupHosts(group) {
+      if (api.fail.groups) throw api.fail.groups;
+      const members = HOST_GROUPS.find((g) => g.name === group)?.members ?? [];
+      return api.hosts.filter((h) => members.includes(h.name));
+    },
+    async listGroupServices(group) {
+      if (api.fail.groups) throw api.fail.groups;
+      const members = SERVICE_GROUPS.find((g) => g.name === group)?.members ?? [];
+      return api.services.filter((x) =>
+        members.some((m) => m.host_name === x.host_name && m.service_description === x.description),
+      );
+    },
+    groupUrl(kind, group) {
+      return `https://mon.example/nagios/${kind}/${group}`;
     },
     async listHostServices(host) {
       if (api.fail.services) throw api.fail.services;
@@ -123,6 +161,17 @@ test('tree: three groups with counts, badge of unhandled problems, host descript
       ['Host problems', '2', 2],
       ['Service problems', '3', 2],
       ['All hosts', '3', 1],
+    ],
+  );
+  const [, , , serviceGroups, hostGroups] = await roots(controller);
+  assert.deepEqual(
+    [serviceGroups, hostGroups].map((g) => {
+      const item = controller.tree.getTreeItem(g);
+      return [item.label, item.description, item.collapsibleState, item.id];
+    }),
+    [
+      ['Service groups', '3', 1, 'group:servicegroups'],
+      ['Host groups', '2', 1, 'group:hostgroups'],
     ],
   );
   // mail01, web01/HTTP, web01/DISK — backup01 (ack) and db01/DISK (downtime) are handled.
@@ -453,4 +502,104 @@ test('activate without deps: real config loader, real API, errors as messages', 
   const provider = stub.docProviders.get('nagioscli-status');
   const uri = vscode.Uri.from({ scheme: 'nagioscli-status', path: '/h.log', query: 'host=h' });
   assert.match(await provider.provideTextDocumentContent(uri), /cannot load h: .*ECONNREFUSED/);
+});
+
+test('service groups: members, problems and icon per group, members on expand', async (t) => {
+  const { controller } = await setup(t);
+  const serviceGroups = (await roots(controller))[3];
+  const [web, db, empty] = await controller.tree.getChildren(serviceGroups);
+  assert.deepEqual(web, { kind: 'servicegroup', group: SERVICE_GROUPS[0] });
+  const item = controller.tree.getTreeItem(web);
+  assert.equal(item.label, 'web');
+  assert.equal(item.id, 'servicegroup:web');
+  assert.equal(item.collapsibleState, 1);
+  assert.equal(item.description, '2 members · 2 problems');
+  assert.equal(item.iconPath.id, 'error');
+  assert.equal(item.contextValue, 'servicegroup');
+  assert.equal(item.tooltip.value, '**web**\n\nWeb services');
+  // db/DISK is in downtime: handled, muted icon; alias equal to the name is not repeated.
+  const dbItem = controller.tree.getTreeItem(db);
+  assert.equal(dbItem.iconPath.id, 'bell-slash');
+  assert.equal(dbItem.tooltip.value, '**db**');
+  const emptyItem = controller.tree.getTreeItem(empty);
+  assert.equal(emptyItem.description, '');
+  assert.equal(emptyItem.iconPath.id, 'pass');
+
+  const members = await controller.tree.getChildren(web);
+  assert.deepEqual(
+    members.map((n) => [n.service.description, n.scope, n.path]),
+    [
+      ['DISK', 'group', 'servicegroup:web'],
+      ['HTTP', 'group', 'servicegroup:web'],
+    ],
+  );
+  const svcItem = controller.tree.getTreeItem(members[1]);
+  assert.equal(svcItem.label, 'web01 / HTTP');
+  assert.equal(svcItem.id, 'servicegroup:web:service:web01/HTTP');
+  assert.equal(svcItem.contextValue, 'service.problem');
+  assert.deepEqual(await controller.tree.getChildren(members[1]), []);
+});
+
+test('host groups: hosts on expand, their services under unique ids', async (t) => {
+  const { controller, api } = await setup(t);
+  const hostGroups = (await roots(controller))[4];
+  const [linux, backup] = await controller.tree.getChildren(hostGroups);
+  const item = controller.tree.getTreeItem(linux);
+  assert.equal(item.id, 'hostgroup:linux');
+  assert.equal(item.description, '2 members · 1 problem');
+  assert.equal(item.contextValue, 'hostgroup');
+  assert.equal(controller.tree.getTreeItem(backup).iconPath.id, 'bell-slash');
+
+  const hosts = await controller.tree.getChildren(linux);
+  assert.deepEqual(
+    hosts.map((n) => [n.host.name, n.scope, n.path]),
+    [
+      ['mail01', 'group', 'hostgroup:linux'],
+      ['web01', 'group', 'hostgroup:linux'],
+    ],
+  );
+  const webItem = controller.tree.getTreeItem(hosts[1]);
+  assert.equal(webItem.id, 'hostgroup:linux:host:web01');
+  assert.equal(webItem.collapsibleState, 1);
+  const services = await controller.tree.getChildren(hosts[1]);
+  assert.equal(services[0].path, 'hostgroup:linux:host:web01');
+  const svcItem = controller.tree.getTreeItem(services[0]);
+  assert.equal(svcItem.label, 'DISK');
+  assert.equal(svcItem.id, 'hostgroup:linux:host:web01:service:web01/DISK');
+
+  // Same service under All hosts: a different id, so both can be expanded.
+  const all = (await roots(controller))[2];
+  const allWeb = (await controller.tree.getChildren(all)).find((n) => n.host.name === 'web01');
+  const allDisk = (await controller.tree.getChildren(allWeb))[0];
+  assert.equal(controller.tree.getTreeItem(allDisk).id, 'all:host:web01:service:web01/DISK');
+
+  api.fail.groups = new Error('HTTP 403');
+  assert.deepEqual(await controller.tree.getChildren(linux), [
+    { kind: 'message', text: 'HTTP 403' },
+  ]);
+  const serviceGroup = (await controller.tree.getChildren((await roots(controller))[3]))[0];
+  assert.deepEqual(await controller.tree.getChildren(serviceGroup), [
+    { kind: 'message', text: 'HTTP 403' },
+  ]);
+});
+
+test('groups: no problems counted before the first load', async (t) => {
+  const { controller } = await setup(t);
+  controller.tree.snapshot = null;
+  const item = controller.tree.getTreeItem({ kind: 'hostgroup', group: HOST_GROUPS[0] });
+  assert.equal(item.description, '2 members');
+  assert.equal(item.iconPath.id, 'pass');
+});
+
+test('open in browser: group overview pages', async (t) => {
+  await setup(t);
+  await stub.commands.get('nagioscli.openInNagios')({ kind: 'hostgroup', group: HOST_GROUPS[0] });
+  await stub.commands.get('nagioscli.openInNagios')({
+    kind: 'servicegroup',
+    group: SERVICE_GROUPS[0],
+  });
+  assert.deepEqual(stub.callsOf('openExternal'), [
+    ['https:https://mon.example/nagios/hostgroup/linux'],
+    ['https:https://mon.example/nagios/servicegroup/web'],
+  ]);
 });

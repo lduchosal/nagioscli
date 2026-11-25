@@ -8,6 +8,12 @@ Nagios Core state in the VS Code sidebar, driven by the same
   `nagioscli problems`), unhandled first, then worst state. A badge on the
   view counts the problems nobody has acknowledged or put in downtime.
 - **All hosts**: every monitored host; expand one to see its services.
+- **Service groups**: every service group (objectjson.cgi), with its
+  member count and the problems among its members (red: unhandled,
+  muted: all acknowledged / in downtime, green: clean); expand one to see
+  its services with their state (ken #1134).
+- **Host groups**: same for host groups; expand a group to see its hosts,
+  then a host to see its services.
 - Each row shows the state, how long it has been in it, and the `ack`,
   `downtime`, `soft 1/3`, `checks off` markers; the tooltip carries the
   plugin output.
@@ -18,7 +24,8 @@ Nagios Core state in the VS Code sidebar, driven by the same
   and **Acknowledge problem…** (sticky, notifies contacts, comment
   required — like `nagioscli ack`), inline or from the context menu.
   Commands go through the Nagios 4.4+ CSRF preflight like the CLI.
-- **Open in Nagios**: the Nagios home, or the host / service page.
+- **Open in Nagios**: the Nagios home, the host / service page, or the
+  overview of a service group / host group.
 
 ## Install
 

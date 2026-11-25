@@ -31,7 +31,8 @@ A CLI tool to manage Nagios Core via HTTP REST API.
   - Password manager (`pass`) integration
   - Vouch Proxy (SSO/OAuth) support
   - Nginx API token (for CLI/automation)
-- VS Code extension: host and service problems in the sidebar, status
+- VS Code extension: host and service problems, service groups and host
+  groups in the sidebar, status
   detail with plugin output, force check, acknowledge — reads the same
   `nagioscli.ini` (see [VS Code extension](#vs-code-extension))
 

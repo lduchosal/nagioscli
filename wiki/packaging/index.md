@@ -4,6 +4,10 @@ pyproject.toml, pdm, publish script, CI, linters, type checking.
 
 Section: `packaging`
 
+## En cours (1)
+
+- [QUALITY / Ajoute deptry et pip-audit au publish.sh](quality-ajoute-deptry-et-pip-audit-au-publish-sh-1239.md) — _review_
+
 ## Archivé (2)
 
 - [QUALITY / Wire codecov, SonarCloud and interrogate badges](quality-wire-codecov-sonarcloud-and-interrogate-badges-627.md)

@@ -311,3 +311,63 @@ test('nodeTransport: https with verify_ssl=false is accepted by node (no network
   await assert.rejects(nodeTransport('https://127.0.0.1:1/', req), /ECONNREFUSED/);
   await assert.rejects(nodeTransport('https://127.0.0.1:1/', { ...req, verifySsl: true }));
 });
+
+test('group lists: objectjson.cgi with details, sorted, members kept', async () => {
+  const { impl, calls } = fakeTransport(
+    ok({
+      servicegrouplist: {
+        web: {
+          alias: 'Web services',
+          members: [{ host_name: 'web01', service_description: 'HTTP' }],
+        },
+        db: { group_name: 'db' },
+      },
+    }),
+  );
+  assert.deepEqual(await makeApi(impl).listServiceGroups(), [
+    { name: 'db', alias: '', members: [] },
+    {
+      name: 'web',
+      alias: 'Web services',
+      members: [{ host_name: 'web01', service_description: 'HTTP' }],
+    },
+  ]);
+  assert.equal(
+    calls[0].url,
+    'https://mon.example/nagios/cgi-bin/objectjson.cgi?query=servicegrouplist&details=true',
+  );
+});
+
+test('group lists: a bare list of names, or nothing at all', async () => {
+  const names = fakeTransport(ok({ hostgrouplist: ['linux', 'bsd'] }));
+  assert.deepEqual(await makeApi(names.impl).listHostGroups(), [
+    { name: 'bsd', alias: '', members: [] },
+    { name: 'linux', alias: '', members: [] },
+  ]);
+  assert.match(names.calls[0].url, /objectjson.cgi\?query=hostgrouplist&details=true$/);
+  const none = fakeTransport(ok({}));
+  assert.deepEqual(await makeApi(none.impl).listHostGroups(), []);
+  const refused = fakeTransport({ body: { result: { type_code: 6, message: 'Not authorized' } } });
+  await assert.rejects(makeApi(refused.impl).listHostGroups(), /objectjson.cgi: Not authorized/);
+});
+
+test('group members: statusjson lists filtered by hostgroup / servicegroup', async () => {
+  const { impl, calls } = fakeTransport(ok({ hostlist: { web01: { status: 2 } } }));
+  const api = makeApi(impl);
+  assert.deepEqual(await api.listGroupHosts('linux servers'), [{ status: 2, name: 'web01' }]);
+  assert.match(calls[0].url, /query=hostlist&details=true&hostgroup=linux\+servers$/);
+  await api.listGroupServices('web');
+  assert.match(calls[1].url, /query=servicelist&details=true&servicegroup=web$/);
+});
+
+test('groupUrl: status.cgi overview of the group', () => {
+  const api = new NagiosApi(cfg);
+  assert.equal(
+    api.groupUrl('hostgroup', 'linux servers'),
+    'https://mon.example/nagios/cgi-bin/status.cgi?hostgroup=linux+servers&style=overview',
+  );
+  assert.equal(
+    api.groupUrl('servicegroup', 'web'),
+    'https://mon.example/nagios/cgi-bin/status.cgi?servicegroup=web&style=overview',
+  );
+});

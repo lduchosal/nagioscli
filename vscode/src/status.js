@@ -278,7 +278,59 @@ function hostDetailText(host, url, now) {
   return detailText(`Host ${host.name}`, hostState(host.status), host, url, now);
 }
 
+/**
+ * Host problems whose host belongs to the host group.
+ * @param {import('./api').HostGroup} group
+ * @param {Host[]} hostProblems
+ * @returns {Host[]}
+ */
+function hostGroupProblems(group, hostProblems) {
+  const members = new Set(group.members);
+  return hostProblems.filter((host) => members.has(host.name));
+}
+
+/**
+ * Service problems that belong to the service group.
+ * @param {import('./api').ServiceGroup} group
+ * @param {Service[]} serviceProblems
+ * @returns {Service[]}
+ */
+function serviceGroupProblems(group, serviceProblems) {
+  const members = new Set(group.members.map((m) => `${m.host_name}\n${m.service_description}`));
+  return serviceProblems.filter((svc) => members.has(`${svc.host_name}\n${svc.description}`));
+}
+
+/**
+ * "4 members · 1 problem" (members omitted when Nagios did not list them).
+ * @param {number} memberCount
+ * @param {(Service | Host)[]} problems
+ * @returns {string}
+ */
+function groupDescription(memberCount, problems) {
+  const plural = (/** @type {number} */ n, /** @type {string} */ word) =>
+    `${n} ${word}${n > 1 ? 's' : ''}`;
+  const parts = memberCount ? [plural(memberCount, 'member')] : [];
+  if (problems.length) parts.push(plural(problems.length, 'problem'));
+  return parts.join(' · ');
+}
+
+/**
+ * Group icon: red when a problem is unhandled, muted when all are handled,
+ * green when the group is clean.
+ * @param {(Service | Host)[]} problems
+ * @returns {[string, string]}
+ */
+function groupIcon(problems) {
+  if (problems.some((row) => !isHandled(row))) return ['error', 'testing.iconFailed'];
+  if (problems.length) return ['bell-slash', 'testing.iconFailed'];
+  return ['pass', 'testing.iconPassed'];
+}
+
 module.exports = {
+  groupDescription,
+  groupIcon,
+  hostGroupProblems,
+  serviceGroupProblems,
   formatDuration,
   hostDescription,
   hostDetailText,

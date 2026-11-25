@@ -21,7 +21,7 @@ wiki:
       description: Business services that compose the core client into higher-level operations (status, commands, info).
     - id: vscode
       title: VS Code extension
-      description: vscode/ — sidebar of host/service problems and all hosts, status detail, force check, acknowledge; reads nagioscli.ini, shipped as a .vsix on the GitHub release.
+      description: vscode/ — sidebar of host/service problems, all hosts, service groups and host groups, status detail, force check, acknowledge; reads nagioscli.ini, shipped as a .vsix on the GitHub release.
     - id: tests
       title: Tests
       description: Unit tests, integration tests, fixtures, and mock client.
@@ -61,7 +61,7 @@ vscode/                     # section: vscode — VS Code extension (ken #1132)
 ├── src/
 │   ├── config.js           # nagioscli.ini + [auth] + pass, port of core/config.py + core/auth.py
 │   ├── encoding.js         # UTF-8 / cp1252 tolerant decoding, port of core/encoding.py
-│   ├── api.js              # statusjson.cgi + cmd.cgi with CSRF (node:https, no runtime deps)
+│   ├── api.js              # statusjson.cgi + objectjson.cgi (groups) + cmd.cgi with CSRF (node:https, no runtime deps)
 │   ├── status.js           # pure presentation (states, ordering, labels, detail text)
 │   └── extension.js        # VS Code glue (tree, status documents, commands)
 └── test/                   # node --test, vscode-stub.js stands in for `vscode`

@@ -1,0 +1,75 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>#1134 — VSCODE / Service groups et host groups dans l'arbre — kenboard wiki</title><style>body{margin:0;font-family:system-ui,sans-serif;color:#222;background:#fff}
+.layout{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+nav.sidebar{background:#f6f8fa;border-right:1px solid #d0d7de;padding:16px;
+  overflow-y:auto;font-size:13px}
+nav.sidebar h1{font-size:14px;text-transform:uppercase;color:#57606a;margin:0 0 12px}
+nav.sidebar ul{list-style:none;padding:0;margin:0}
+nav.sidebar li{margin:2px 0}
+nav.sidebar a{color:#0969da;text-decoration:none}
+nav.sidebar a:hover{text-decoration:underline}
+nav.sidebar a.current{font-weight:600;color:#1a1a1a}
+main{padding:24px 32px;max-width:900px}
+main h1{margin-top:0}
+main code{background:#f6f8fa;padding:1px 4px;border-radius:3px;font-size:90%}
+main pre{background:#f6f8fa;padding:12px;border-radius:6px;overflow-x:auto}
+main pre code{background:transparent;padding:0}
+main a{color:#0969da}
+/* Task detail (#376f — mirrors templates/modals/task_fullscreen.html) */
+.fullscreen-card{background:#fff;border:1px solid #d0d7de;border-radius:10px;
+  padding:32px 36px;max-width:760px}
+.fullscreen-header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.fullscreen-id{font-size:12px;color:#57606a;font-weight:600}
+.fullscreen-status{font-size:11px;text-transform:uppercase;letter-spacing:.5px;
+  color:#57606a;background:#f6f8fa;padding:3px 8px;border-radius:10px}
+.fullscreen-status.status-todo{background:#ddf4ff;color:#0969da}
+.fullscreen-status.status-doing{background:#fff8c5;color:#9a6700}
+.fullscreen-status.status-review{background:#dafbe1;color:#1a7f37}
+.fullscreen-status.status-done{background:#eaeef2;color:#57606a}
+.fullscreen-title{font-size:22px;font-weight:700;margin:0 0 16px;line-height:1.3}
+.fullscreen-meta{display:flex;align-items:center;gap:10px;margin-bottom:20px;
+  font-size:13px;color:#57606a}
+.task-avatar{width:28px;height:28px;border-radius:50%;display:flex;
+  align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px}
+.fs-who{font-weight:600;color:#222}
+.fullscreen-desc{font-size:14px;line-height:1.7;border-top:1px solid #d0d7de;
+  padding-top:16px}
+.fullscreen-desc h1,.fullscreen-desc h2,.fullscreen-desc h3{margin-top:16px;
+  margin-bottom:8px}
+.fullscreen-desc pre{background:#f6f8fa;border-radius:4px;padding:12px;
+  overflow-x:auto;font-size:12px}
+.fullscreen-desc code{background:#f6f8fa;border-radius:3px;padding:1px 4px;font-size:12px}
+.fullscreen-desc pre code{background:transparent;padding:0}
+.fullscreen-desc ul,.fullscreen-desc ol{padding-left:20px}
+.wiki-nav{margin-top:20px;padding-top:12px;border-top:1px solid #d0d7de;
+  font-size:13px;color:#57606a}
+.wiki-nav a{color:#0969da}
+</style></head><body><div class="layout"><nav class="sidebar"><h1>kenboard wiki</h1><ul><li><a href="index.html">Home</a></li><li style="padding-left:0px"><a href="../cli/index.html">CLI layer</a></li><li style="padding-left:12px"><a href="../cli/commands/index.html">CLI commands</a></li><li style="padding-left:0px"><a href="../core/index.html">Core</a></li><li style="padding-left:12px"><a href="../core/models/index.html">Core / models</a></li><li style="padding-left:12px"><a href="../core/client/index.html">Core / client</a></li><li style="padding-left:0px"><a href="../services/index.html">Services</a></li><li style="padding-left:0px"><a href="../vscode/index.html" class="current">VS Code extension</a></li><li style="padding-left:0px"><a href="../tests/index.html">Tests</a></li><li style="padding-left:0px"><a href="../packaging/index.html">Packaging & tooling</a></li><li style="padding-left:0px"><a href="../docs/index.html">Documentation</a></li></ul></nav><main><div class="fullscreen-card"><div class="fullscreen-header"><span class="fullscreen-id">#1134</span><span class="fullscreen-status status-review">review</span></div><h2 class="fullscreen-title">VSCODE / Service groups et host groups dans l'arbre</h2><div class="fullscreen-meta"><div class="task-avatar" style="background:#0a3069">C</div><span class="fs-who">Claude</span><span>Classified 2026-10-02</span><span>by key:c6597e8c-4d84-44f1-821e-8f9ad6720cf6</span></div><div class="fullscreen-desc"><p><strong>TL;DR</strong> — l'arbre de l'extension n'avait ni groupes de services ni groupes d'hôtes → ajout de « Service groups » et « Host groups » (objectjson.cgi), chaque groupe avec son nombre de membres et ses problèmes, dépliable vers ses services / hôtes (puis services) avec leur état.</p>
+<p>dans la liste de l'extension, peux-tu ajouter:</p>
+<blockquote>
+<p>services groups
+  - service group 1
+  - service group 2
+host groups
+  - host group 1
+  etc ...</p>
+</blockquote>
+<hr />
+<h2>Résolution</h2>
+<h3>Modifications</h3>
+<ul>
+<li><code>vscode/src/api.js</code> : <code>jsonCgi()</code> commun statusjson / objectjson ; <code>listServiceGroups()</code> / <code>listHostGroups()</code> (objectjson.cgi <code>*grouplist&amp;details=true</code>, triés, liste de noms nue tolérée) ; <code>listGroupServices()</code> / <code>listGroupHosts()</code> (statusjson filtré <code>servicegroup=</code> / <code>hostgroup=</code>) ; <code>groupUrl()</code> (status.cgi <code>style=overview</code>).</li>
+<li><code>vscode/src/status.js</code> : <code>serviceGroupProblems()</code> / <code>hostGroupProblems()</code>, <code>groupDescription()</code> (« 2 members · 1 problem »), <code>groupIcon()</code> (rouge non traité, atténué si tout est acquitté / en downtime, vert sinon).</li>
+<li><code>vscode/src/extension.js</code> : racines « Service groups » et « Host groups » (repliées) après « All hosts » ; nœuds groupe dépliables ; services d'un service group affichés « hôte / service » ; hôtes d'un host group dépliables vers leurs services ; <code>path</code> dans les nœuds pour des ids uniques quand un même hôte / service apparaît sous plusieurs parents ; « Open in Nagios » sur un groupe.</li>
+<li><code>vscode/package.json</code> : menu contextuel « Open in Nagios » sur <code>hostgroup</code> / <code>servicegroup</code>.</li>
+<li>Docs : <code>vscode/README.md</code>, README, ARCHITECTURE.md.</li>
+</ul>
+<h3>Comportements obtenus</h3>
+<ul>
+<li>Un groupe montre ses membres et ses problèmes sans requête supplémentaire (calculés depuis la liste des problèmes déjà chargée) ; ses membres sont chargés au dépliage.</li>
+<li>Erreur de chargement d'un groupe (ex. 403) : ligne message sous le groupe, le reste de l'arbre intact.</li>
+</ul>
+<h3>Garde-fous</h3>
+<ul>
+<li><code>./publish.sh --quality</code> : 18/18 vert.</li>
+<li>Extension : 81/81 tests (+10), couverture 100 % lignes / 99,05 % branches / 99,38 % fonctions ; biome et tsc 0.</li>
+</ul></div><div class="wiki-nav"><a href="index.html">← retour à vscode</a> · <a href="../log.html">voir log</a></div></div></main></div></body></html>

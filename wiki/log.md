@@ -2,6 +2,9 @@
 
 Most recent first.
 
+- 2026-11-25T23:42:08 — task #1243 (SECURITY / pass résolu via un PATH fixe - Sonar S4036) → `core` (by key:c6597e8c-4d84-44f1-821e-8f9ad6720cf6)
+- 2026-11-25T23:18:47 — task #1239 (QUALITY / Ajoute deptry et pip-audit au publish.sh) → `packaging` (by key:c6597e8c-4d84-44f1-821e-8f9ad6720cf6)
+- 2026-10-02T20:58:36 — task #1134 (VSCODE / Service groups et host groups dans l'arbre) → `vscode` (by key:c6597e8c-4d84-44f1-821e-8f9ad6720cf6)
 - 2026-10-02T18:58:31 — task #1132 (VSCODE / Extension VS Code nagioscli) → `vscode` (by key:c6597e8c-4d84-44f1-821e-8f9ad6720cf6)
 - 2026-09-18T10:19:43 — task #1109 (CORE / status service plante sur un service en PENDING (status 1)) → `core/models` (by key:c6597e8c-4d84-44f1-821e-8f9ad6720cf6)
 - 2026-09-16T17:57:35 — task #1104 (NAGIOSCLI / Decodage UTF-8 strict - une sortie de plugin en cp1252 fait planter la commande entiere) → `core/client` (by key:c6597e8c-4d84-44f1-821e-8f9ad6720cf6)

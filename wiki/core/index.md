@@ -4,4 +4,7 @@ Configuration loading, Nagios HTTP client, authentication, exceptions, and share
 
 Section: `core`
 
-(no tasks classified yet)
+## En cours (1)
+
+- [SECURITY / pass résolu via un PATH fixe - Sonar S4036](security-pass-r-solu-via-un-path-fixe-sonar-s4036-1243.md) — _review_
+

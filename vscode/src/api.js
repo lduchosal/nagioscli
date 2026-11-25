@@ -1,6 +1,7 @@
 // @ts-check
 // Thin client over the Nagios Core CGIs, port of nagioscli/core/client.py:
-// statusjson.cgi for the state, cmd.cgi (with the Nagios 4.4+ CSRF
+// statusjson.cgi for the state, objectjson.cgi for the host / service
+// groups (ken #1134), cmd.cgi (with the Nagios 4.4+ CSRF
 // preflight) for forced checks and acknowledgements.
 //
 // Transport is node:http(s), not the global fetch: inside VS Code the https
@@ -14,6 +15,7 @@ const { authHeaders } = require('./config');
 const { decodeBody } = require('./encoding');
 
 const STATUS_JSON = 'statusjson.cgi';
+const OBJECT_JSON = 'objectjson.cgi';
 const SUCCESS_MARKER = 'successfully submitted';
 // cmd.cgi command types (include/common.h).
 const CMD_SCHEDULE_FORCED_SVC_CHECK = '7';
@@ -69,6 +71,18 @@ const ERROR_MESSAGE = /<div class=['"]errorMessage['"]>([^<]*)</i;
  * @property {number} [next_check]
  * @property {number} [last_state_change]
  */
+
+/**
+ * A host group or service group of objectjson.cgi. Members are host names
+ * (host groups) or `{ host_name, service_description }` (service groups).
+ * @template M
+ * @typedef {object} Group
+ * @property {string} name
+ * @property {string} alias
+ * @property {M[]} members
+ */
+/** @typedef {Group<string>} HostGroup */
+/** @typedef {Group<{ host_name: string, service_description: string }>} ServiceGroup */
 
 /**
  * @typedef {object} RawResponse
@@ -239,18 +253,77 @@ class NagiosApi {
    * @param {Record<string, string>} query
    * @returns {Promise<Record<string, any>>} the `data` member
    */
-  async statusJson(query) {
-    const resp = await this.request('GET', STATUS_JSON, new URLSearchParams(query));
+  statusJson(query) {
+    return this.jsonCgi(STATUS_JSON, query);
+  }
+
+  /**
+   * One JSON CGI query (statusjson / objectjson share the envelope).
+   * @param {string} cgi
+   * @param {Record<string, string>} query
+   * @returns {Promise<Record<string, any>>} the `data` member
+   */
+  async jsonCgi(cgi, query) {
+    const resp = await this.request('GET', cgi, new URLSearchParams(query));
     let json;
     try {
       json = JSON.parse(resp.body);
     } catch {
-      throw new ApiError(`${STATUS_JSON}: invalid JSON response`, 0);
+      throw new ApiError(`${cgi}: invalid JSON response`, 0);
     }
     if (json?.result?.type_code !== 0) {
-      throw new ApiError(`${STATUS_JSON}: ${json?.result?.message ?? 'Unknown error'}`, 0);
+      throw new ApiError(`${cgi}: ${json?.result?.message ?? 'Unknown error'}`, 0);
     }
     return json.data ?? {};
+  }
+
+  /**
+   * objectjson.cgi group list, sorted by name. With details Nagios answers
+   * `{name: {alias, members}}`; a bare list of names is tolerated.
+   * @param {'hostgroup' | 'servicegroup'} kind
+   * @returns {Promise<Group<any>[]>}
+   */
+  async groupList(kind) {
+    const data = await this.jsonCgi(OBJECT_JSON, { query: `${kind}list`, details: 'true' });
+    const list = data[`${kind}list`] ?? {};
+    const entries = Array.isArray(list)
+      ? list.map((name) => [name, {}])
+      : Object.entries(list).map(([name, value]) => [name, asRow(value)]);
+    return entries
+      .map(([name, value]) => ({
+        name,
+        alias: value.alias ?? '',
+        members: Array.isArray(value.members) ? value.members : [],
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  /** @returns {Promise<HostGroup[]>} */
+  listHostGroups() {
+    return this.groupList('hostgroup');
+  }
+
+  /** @returns {Promise<ServiceGroup[]>} */
+  listServiceGroups() {
+    return this.groupList('servicegroup');
+  }
+
+  /**
+   * Hosts of a host group, with their state.
+   * @param {string} group
+   * @returns {Promise<Host[]>}
+   */
+  listGroupHosts(group) {
+    return this.hostList({ hostgroup: group });
+  }
+
+  /**
+   * Services of a service group, with their state.
+   * @param {string} group
+   * @returns {Promise<Service[]>}
+   */
+  listGroupServices(group) {
+    return this.serviceList({ servicegroup: group });
   }
 
   /**
@@ -403,6 +476,17 @@ class NagiosApi {
     const query = new URLSearchParams({ type: service === undefined ? '1' : '2', host });
     if (service !== undefined) query.set('service', service);
     return `${this.cfg.url}/cgi-bin/extinfo.cgi?${query}`;
+  }
+
+  /**
+   * Web UI overview of a host group or service group.
+   * @param {'hostgroup' | 'servicegroup'} kind
+   * @param {string} group
+   * @returns {string}
+   */
+  groupUrl(kind, group) {
+    const query = new URLSearchParams({ [kind]: group, style: 'overview' });
+    return `${this.cfg.url}/cgi-bin/status.cgi?${query}`;
   }
 }
 

@@ -181,3 +181,44 @@ test('hostDetailText: address, soft attempts, no output yet', () => {
   assert.match(text, /Flags: {6}soft 0\/5/);
   assert.match(text, /\(no output yet\)\n$/);
 });
+
+test('group problems: members matched by host, or by host + service', () => {
+  const hostProblems = [
+    { name: 'web01', status: 4 },
+    { name: 'db01', status: 8 },
+  ];
+  assert.deepEqual(
+    s.hostGroupProblems({ name: 'g', alias: '', members: ['web01', 'mail01'] }, hostProblems),
+    [hostProblems[0]],
+  );
+  const serviceProblems = [
+    { host_name: 'web01', description: 'HTTP', status: 16 },
+    { host_name: 'web02', description: 'HTTP', status: 4 },
+    { host_name: 'web01', description: 'DISK', status: 4 },
+  ];
+  const group = {
+    name: 'web',
+    alias: '',
+    members: [
+      { host_name: 'web01', service_description: 'HTTP' },
+      { host_name: 'web02', service_description: 'SSH' },
+    ],
+  };
+  assert.deepEqual(s.serviceGroupProblems(group, serviceProblems), [serviceProblems[0]]);
+});
+
+test('groupDescription and groupIcon', () => {
+  assert.equal(s.groupDescription(0, []), '');
+  assert.equal(s.groupDescription(1, []), '1 member');
+  assert.equal(s.groupDescription(4, [{ status: 4 }]), '4 members · 1 problem');
+  assert.equal(s.groupDescription(0, [{ status: 4 }, { status: 8 }]), '2 problems');
+  assert.deepEqual(s.groupIcon([]), ['pass', 'testing.iconPassed']);
+  assert.deepEqual(
+    s.groupIcon([{ status: 16 }, { status: 4, problem_has_been_acknowledged: true }]),
+    ['error', 'testing.iconFailed'],
+  );
+  assert.deepEqual(s.groupIcon([{ status: 16, scheduled_downtime_depth: 1 }]), [
+    'bell-slash',
+    'testing.iconFailed',
+  ]);
+});

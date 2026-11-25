@@ -1,0 +1,100 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>#1239 — QUALITY / Ajoute deptry et pip-audit au publish.sh — kenboard wiki</title><style>body{margin:0;font-family:system-ui,sans-serif;color:#222;background:#fff}
+.layout{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+nav.sidebar{background:#f6f8fa;border-right:1px solid #d0d7de;padding:16px;
+  overflow-y:auto;font-size:13px}
+nav.sidebar h1{font-size:14px;text-transform:uppercase;color:#57606a;margin:0 0 12px}
+nav.sidebar ul{list-style:none;padding:0;margin:0}
+nav.sidebar li{margin:2px 0}
+nav.sidebar a{color:#0969da;text-decoration:none}
+nav.sidebar a:hover{text-decoration:underline}
+nav.sidebar a.current{font-weight:600;color:#1a1a1a}
+main{padding:24px 32px;max-width:900px}
+main h1{margin-top:0}
+main code{background:#f6f8fa;padding:1px 4px;border-radius:3px;font-size:90%}
+main pre{background:#f6f8fa;padding:12px;border-radius:6px;overflow-x:auto}
+main pre code{background:transparent;padding:0}
+main a{color:#0969da}
+/* Task detail (#376f — mirrors templates/modals/task_fullscreen.html) */
+.fullscreen-card{background:#fff;border:1px solid #d0d7de;border-radius:10px;
+  padding:32px 36px;max-width:760px}
+.fullscreen-header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.fullscreen-id{font-size:12px;color:#57606a;font-weight:600}
+.fullscreen-status{font-size:11px;text-transform:uppercase;letter-spacing:.5px;
+  color:#57606a;background:#f6f8fa;padding:3px 8px;border-radius:10px}
+.fullscreen-status.status-todo{background:#ddf4ff;color:#0969da}
+.fullscreen-status.status-doing{background:#fff8c5;color:#9a6700}
+.fullscreen-status.status-review{background:#dafbe1;color:#1a7f37}
+.fullscreen-status.status-done{background:#eaeef2;color:#57606a}
+.fullscreen-title{font-size:22px;font-weight:700;margin:0 0 16px;line-height:1.3}
+.fullscreen-meta{display:flex;align-items:center;gap:10px;margin-bottom:20px;
+  font-size:13px;color:#57606a}
+.task-avatar{width:28px;height:28px;border-radius:50%;display:flex;
+  align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px}
+.fs-who{font-weight:600;color:#222}
+.fullscreen-desc{font-size:14px;line-height:1.7;border-top:1px solid #d0d7de;
+  padding-top:16px}
+.fullscreen-desc h1,.fullscreen-desc h2,.fullscreen-desc h3{margin-top:16px;
+  margin-bottom:8px}
+.fullscreen-desc pre{background:#f6f8fa;border-radius:4px;padding:12px;
+  overflow-x:auto;font-size:12px}
+.fullscreen-desc code{background:#f6f8fa;border-radius:3px;padding:1px 4px;font-size:12px}
+.fullscreen-desc pre code{background:transparent;padding:0}
+.fullscreen-desc ul,.fullscreen-desc ol{padding-left:20px}
+.wiki-nav{margin-top:20px;padding-top:12px;border-top:1px solid #d0d7de;
+  font-size:13px;color:#57606a}
+.wiki-nav a{color:#0969da}
+</style></head><body><div class="layout"><nav class="sidebar"><h1>kenboard wiki</h1><ul><li><a href="index.html">Home</a></li><li style="padding-left:0px"><a href="../cli/index.html">CLI layer</a></li><li style="padding-left:12px"><a href="../cli/commands/index.html">CLI commands</a></li><li style="padding-left:0px"><a href="../core/index.html">Core</a></li><li style="padding-left:12px"><a href="../core/models/index.html">Core / models</a></li><li style="padding-left:12px"><a href="../core/client/index.html">Core / client</a></li><li style="padding-left:0px"><a href="../services/index.html">Services</a></li><li style="padding-left:0px"><a href="../vscode/index.html">VS Code extension</a></li><li style="padding-left:0px"><a href="../tests/index.html">Tests</a></li><li style="padding-left:0px"><a href="../packaging/index.html" class="current">Packaging & tooling</a></li><li style="padding-left:0px"><a href="../docs/index.html">Documentation</a></li></ul></nav><main><div class="fullscreen-card"><div class="fullscreen-header"><span class="fullscreen-id">#1239</span><span class="fullscreen-status status-review">review</span></div><h2 class="fullscreen-title">QUALITY / Ajoute deptry et pip-audit au publish.sh</h2><div class="fullscreen-meta"><div class="task-avatar" style="background:#0a3069">C</div><span class="fs-who">Claude</span><span>Classified 2026-11-25</span><span>by key:c6597e8c-4d84-44f1-821e-8f9ad6720cf6</span></div><div class="fullscreen-desc"><h2>Contexte</h2>
+<p><code>./publish.sh</code> (ken #998) couvre déjà format, lint, arch, typecheck,
+interrogate, vulture, refurb, tests + coverage, et côté VS Code
+<code>npm audit</code>. Il manque deux gates côté Python :</p>
+<ul>
+<li><strong>deptry</strong> — cohérence entre les imports réels et les dépendances
+  déclarées dans <code>pyproject.toml</code> (deps manquantes, inutilisées,
+  transitives importées directement, deps dev utilisées au runtime).</li>
+<li><strong>pip-audit</strong> — vulnérabilités connues (PyPI advisory / OSV) dans les
+  dépendances installées, pendant Python de <code>npm audit</code>.</li>
+</ul>
+<h2>À faire</h2>
+<ul>
+<li>Ajouter <code>deptry</code> et <code>pip-audit</code> au groupe dev de <code>pyproject.toml</code>
+  (+ <code>pdm lock</code>).</li>
+<li>Scripts PDM <code>deptry</code> et <code>pip-audit</code> (ou <code>audit</code>) dans
+  <code>[tool.pdm.scripts]</code>.</li>
+<li>Config <code>[tool.deptry]</code> si nécessaire (ignores justifiés uniquement —
+  le runtime est volontairement stdlib <code>urllib</code>, pas de <code>requests</code> /
+  <code>httpx</code>).</li>
+<li>Étapes <code>print_step</code> + <code>run_command</code> (bloquantes) dans la phase
+  quality de <code>publish.sh</code>, à côté de vulture / refurb et du
+  <code>npm audit</code>.</li>
+<li>Ajouter les deux au composite <code>pdm run check</code>.</li>
+<li>Mettre à jour la liste des gates dans <code>CLAUDE.md</code> (section Quality
+  gate) et la doc qualité (<code>doc/code-quality.md</code>) si pertinent.</li>
+</ul>
+<h2>Critères d'acceptation</h2>
+<ul>
+<li><code>./publish.sh --quality</code> exécute deptry et pip-audit et échoue si
+  l'un d'eux remonte un problème.</li>
+<li><code>pdm run check</code> passe sur <code>main</code>.</li>
+</ul>
+<hr />
+<h2>Résolution</h2>
+<h3>Modifications</h3>
+<ul>
+<li><code>pyproject.toml</code> : <code>deptry&gt;=0.25</code> et <code>pip-audit&gt;=2.9</code> dans le groupe dev ; scripts PDM <code>deptry</code> (<code>deptry .</code>) et <code>audit</code> ; tous deux ajoutés au composite <code>check</code>. Pas de <code>[tool.deptry]</code> : aucun ignore nécessaire.</li>
+<li><code>publish.sh</code> : étapes bloquantes « Dependency Check (deptry) » et « Python Dependencies Security Audit (pip-audit) » après refurb, avant la suite de tests.</li>
+<li><strong>Plancher Python 3.10 → 3.11</strong> (décision validée) : <code>requires-python</code>, classifiers, cibles black/ruff/mypy, matrice CI <code>python-package.yml</code>, <code>sonar.python.version</code>, <code>CLAUDE.md</code>.</li>
+<li><code>CLAUDE.md</code> (section Quality gate) et <code>doc/code-quality.md</code> (nouvelle section « Gates de dépendances ») documentés.</li>
+</ul>
+<h3>Comportements obtenus</h3>
+<ul>
+<li><code>pdm run audit</code> audite ce que <strong><code>pdm.lock</code></strong> épingle (tous les groupes : export <code>--without-hashes</code> + <code>pip-audit --no-deps --disable-pip</code>), pas la <code>.venv</code> — celle-ci contenait des paquets étrangers au projet (sqlparse, werkzeug, nagiosapi…) qui auraient généré des faux positifs.</li>
+<li>Fail-closed : l'export va dans un fichier <code>mktemp</code> chaîné en <code>&amp;&amp;</code>. Un pipe aurait été un fail-open (pdm.lock n'a pas de hashes → export avec hashes en erreur → liste vide → « No known vulnerabilities found », exit 0, constaté pendant l'implémentation). Vérifié : export cassé → rc=1.</li>
+<li>Premier run : 17 CVE sur <code>filelock 4.1.0</code> (outillage pdm/virtualenv). Toutes les versions corrigées (≥ 4.1.1) exigent Python ≥ 3.11 → plancher monté à 3.11 (3.10 EOL oct. 2026) ; lock résolu sur <code>filelock 4.3.1</code>, audit propre.</li>
+<li>deptry : aucune issue (runtime = click + certifi, urllib stdlib).</li>
+</ul>
+<h3>Garde-fous</h3>
+<ul>
+<li><code>pdm run check</code> : passed (deptry, audit, 190 tests, metrics gate palier 1 PASS, vscode-check).</li>
+<li><code>./publish.sh --quality</code> : <strong>PASSED</strong> (rc=0), toutes étapes vertes.</li>
+<li><code>npm audit</code> de l'extension (échec pré-existant, 9 advisories dont 4 high) corrigé dans la foulée : <code>npm audit fix</code> (undici, markdown-it, @azure/msal-node, fast-uri, qs → <code>package-lock.json</code>) + <code>overrides</code> dans <code>vscode/package.json</code> (<code>glob ^14.0.6</code>, <code>minimatch ^11.0.9</code>) — même <code>@vscode/vsce</code> 4.1.1 reste dans la plage vulnérable via <code>minimatch ^10.2.6</code>. <code>npm audit</code> : 0 vulnerabilities ; <code>.vsix</code> de test identique (12 fichiers) à celui de la 0.1.28.</li>
+</ul></div><div class="wiki-nav"><a href="index.html">← retour à packaging</a> · <a href="../log.html">voir log</a></div></div></main></div></body></html>
