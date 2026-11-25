@@ -1,6 +1,6 @@
 # nagioscli — agent notes
 
-CLI for managing Nagios Core via HTTP. Python 3.10+, packaged with PDM.
+CLI for managing Nagios Core via HTTP. Python 3.11+, packaged with PDM.
 
 ## Naming quirk
 
@@ -39,8 +39,9 @@ packages.
 `./publish.sh` is the full quality gate (pattern imported from
 semacli/kenboard, ken #998). Quality phase: clean, lockfile sync,
 install, outdated report, format (ruff), format-check (black), lint,
-arch (import-linter), typecheck, interrogate, vulture, refurb, full
-test suite with coverage, the VS Code extension gates (npm ci, npm
+arch (import-linter), typecheck, interrogate, vulture, refurb,
+deptry (imports vs declared deps), pip-audit (CVEs in every version
+`pdm.lock` pins — `pdm run audit`), full test suite with coverage, the VS Code extension gates (npm ci, npm
 audit, biome, tsc, node --test), then the blocking metrics gate
 (`scripts/quality_metrics.py` — ceilings + best-ever ratchet vs
 `doc/quality-history.csv`, policy in `doc/code-quality.md`).

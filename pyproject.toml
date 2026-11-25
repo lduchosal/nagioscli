@@ -11,14 +11,13 @@ authors = [
 description = "A CLI tool to manage Nagios Core via HTTP REST API"
 readme = "README.md"
 license = {text = "MIT"}
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: System Administrators",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -44,6 +43,8 @@ dev = [
     "import-linter>=2.11",
     "vulture>=2.14",
     "refurb>=2.2.0",
+    "deptry>=0.25",
+    "pip-audit>=2.9",
 ]
 publish = [
     "twine>=6.2.0",
@@ -61,10 +62,10 @@ nagioscli = "nagioscli.cli:main"
 
 [tool.black]
 line-length = 100
-target-version = ['py310']
+target-version = ['py311']
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
@@ -122,6 +123,17 @@ format-check = "black --check nagioscli/ tests/"
 interrogate = "interrogate nagioscli/"
 vulture = "vulture"
 refurb = "refurb nagioscli/"
+# ken #1239 — dependency hygiene: imports vs declared deps (missing,
+# unused, transitive, dev-only used at runtime). Scans nagioscli/ and
+# scripts/; tests/ are excluded by deptry's defaults.
+deptry = "deptry ."
+# ken #1239 — known vulnerabilities (PyPA advisory DB / OSV) in what
+# pdm.lock pins, all groups: the export goes to a temp file chained with
+# `&&` — never piped — so a failed export fails the gate instead of
+# handing pip-audit an empty list (which reports "no vulnerabilities").
+# Audits the lockfile, not .venv, which may hold unrelated packages.
+# --no-deps: the export is fully pinned but pdm.lock carries no hashes.
+audit = { shell = "f=$(mktemp) && pdm export -G :all --without-hashes -o \"$f\" && pip-audit -r \"$f\" --no-deps --disable-pip --progress-spinner off; rc=$?; rm -f \"$f\"; exit $rc" }
 # Quality metrics snapshot & blocking gate (pattern semacli ken #828) —
 # see doc/code-quality.md
 metrics = "python scripts/quality_metrics.py"
@@ -142,7 +154,7 @@ vscode-typecheck = { shell = "cd vscode && npm run typecheck" }
 vscode-test = { shell = "cd vscode && npm run coverage" }
 vscode-package = { shell = "cd vscode && npm run package" }
 vscode-check = {composite = ["vscode-lint", "vscode-typecheck", "vscode-test"]}
-check = {composite = ["lint", "format-check", "typecheck", "arch", "vulture", "refurb", "test", "metrics-gate", "vscode-check"]}
+check = {composite = ["lint", "format-check", "typecheck", "arch", "vulture", "refurb", "deptry", "audit", "test", "metrics-gate", "vscode-check"]}
 clean = "rm -rf .coverage htmlcov/ .pytest_cache/ __pycache__/ nagioscli/__pycache__/"
 version-patch = "pdm bump patch"
 version-minor = "pdm bump minor"
@@ -155,7 +167,7 @@ version-files = [
 
 [tool.ruff]
 line-length = 100
-target-version = "py310"
+target-version = "py311"
 
 [tool.ruff.lint]
 # Quality-gate locks (pattern semacli/kenboard, doc/code-quality.md): each

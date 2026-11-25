@@ -175,6 +175,17 @@ run_command "pdm run vulture" "Dead code check"
 print_step "Code Quality Check (refurb)"
 run_command "pdm run refurb" "Code quality check"
 
+# ken #1239: imports vs declared dependencies (missing / unused /
+# transitive / dev-only used at runtime).
+print_step "Dependency Check (deptry)"
+run_command "pdm run deptry" "Dependency check"
+
+# ken #1239: Python counterpart of the npm audit below — blocking audit of
+# every version pdm.lock pins (all groups). A known vulnerability stops the
+# release: bump the dependency, don't ignore it.
+print_step "Python Dependencies Security Audit (pip-audit)"
+run_command "pdm run audit" "Python dependencies security audit"
+
 # Full suite with coverage: the metrics gate below reads the .coverage
 # file this run leaves behind.
 print_step "Running Tests (full suite, coverage)"

@@ -27,6 +27,27 @@ Le gate est exécuté par `pdm run check` **et** par `publish.sh` (juste après
 la suite complète pour lire une couverture fraîche). `sh publish.sh --quality`
 rejoue toute la chaîne qualité sans bump ni publication.
 
+## Gates de dépendances (binaires, hors ratchet)
+
+Ken #1239. Deux gates pass/fail, exécutés par `pdm run check` et
+`publish.sh` (phase qualité) — pas de métrique dans le CSV :
+
+```sh
+pdm run deptry   # imports vs pyproject : deps manquantes, inutilisées,
+                 # transitives importées en direct, dev utilisées au runtime
+pdm run audit    # pip-audit : CVE connues dans tout ce que pdm.lock épingle
+```
+
+- `audit` porte sur `pdm.lock` (tous les groupes, export sans hashes +
+  `--no-deps`), **pas** sur la `.venv`, qui peut contenir des paquets
+  étrangers au projet. L'export passe par un fichier temporaire chaîné en
+  `&&` : un export en échec fait échouer le gate (un pipe donnerait une
+  liste vide → « No known vulnerabilities found », exit 0).
+- Une vulnérabilité se corrige en montant la dépendance, pas en l'ignorant.
+  C'est ce qui a fixé le plancher Python à 3.11 : aucun `filelock` corrigé
+  (≥ 4.1.1, outillage pdm/virtualenv) ne supporte 3.10, EOL depuis
+  octobre 2026.
+
 ## Critères suivis
 
 | Critère | Définition | Baseline (2026-07-28, v0.1.25, ken #998) | Direction |
